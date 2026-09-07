@@ -1,0 +1,187 @@
+@import 'tailwindcss';
+
+/* ============================================
+   Omflix Design System
+   ============================================ */
+
+@theme {
+  /* Core palette */
+  --color-omflix-black: #0a0a0a;
+  --color-omflix-dark: #111111;
+  --color-omflix-darker: #0d0d0d;
+  --color-omflix-surface: #161616;
+  --color-omflix-surface-hover: #1e1e1e;
+  --color-omflix-border: #222222;
+  --color-omflix-muted: #888888;
+  --color-omflix-text: #e5e5e5;
+  --color-omflix-white: #f5f5f5;
+
+  /* Brand red */
+  --color-omflix-red: #D4202C;
+  --color-omflix-red-hover: #E8323E;
+  --color-omflix-red-dark: #8B1520;
+  --color-omflix-red-glow: rgba(212, 32, 44, 0.3);
+
+  /* Semantic */
+  --color-omflix-success: #22c55e;
+  --color-omflix-warning: #eab308;
+  --color-omflix-error: #ef4444;
+  --color-omflix-info: #3b82f6;
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 8px 40px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 30px rgba(212, 32, 44, 0.15);
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Animation */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+html {
+  background-color: var(--color-omflix-black);
+  color: var(--color-omflix-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--color-omflix-black);
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ============================================
+   Glassmorphism Utilities
+   ============================================ */
+
+.glass {
+  background: rgba(22, 22, 22, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-heavy {
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ============================================
+   Movie Card Animations
+   ============================================ */
+
+.card-hover {
+  transition: transform 0.3s var(--ease-smooth), box-shadow 0.3s var(--ease-smooth);
+}
+
+.card-hover:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-card-hover);
+  z-index: 10;
+}
+
+/* ============================================
+   Row scrolling
+   ============================================ */
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   Text gradients
+   ============================================ */
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-omflix-white), var(--color-omflix-muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Progress bar
+   ============================================ */
+
+.progress-bar {
+  background: linear-gradient(90deg, var(--color-omflix-red), var(--color-omflix-red-hover));
+  box-shadow: 0 0 8px var(--color-omflix-red-glow);
+}
+
+/* ============================================
+   Safe areas (iPhone notch/Dynamic Island)
+   ============================================ */
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ============================================
+   Focus styles (accessibility)
+   ============================================ */
+
+:focus-visible {
+  outline: 2px solid var(--color-omflix-red);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

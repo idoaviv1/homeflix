@@ -1,0 +1,74 @@
+// ============================================
+// Omflix Server — Main Entry Point
+// ============================================
+// Starts two Fastify instances:
+//   1. Public API on PUBLIC_HOST:PUBLIC_PORT (0.0.0.0:8096)
+//   2. Admin API on ADMIN_HOST:ADMIN_PORT (127.0.0.1:8097)
+// ============================================
+
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Logger } from '@nestjs/common';
+import { AppModule } from './app.module';
+import { AdminModule } from './admin/admin.module';
+
+const logger = new Logger('Bootstrap');
+
+async function bootstrap() {
+  // ── Public Application ──
+  const publicApp = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({
+      logger: {
+        level: process.env['LOG_LEVEL'] || 'info',
+        transport:
+          process.env['NODE_ENV'] !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+      },
+      trustProxy: true,
+    }),
+  );
+
+  publicApp.enableCors({
+    origin: true, // Allow same-network origins
+    credentials: true,
+  });
+
+  publicApp.setGlobalPrefix('api/v1');
+
+  const publicHost = process.env['PUBLIC_HOST'] || '0.0.0.0';
+  const publicPort = parseInt(process.env['PUBLIC_PORT'] || '8096', 10);
+
+  await publicApp.listen(publicPort, publicHost);
+  logger.log(`🎬 Omflix Public API running on http://${publicHost}:${publicPort}`);
+
+  // ── Admin Application (localhost only) ──
+  const adminApp = await NestFactory.create<NestFastifyApplication>(
+    AdminModule,
+    new FastifyAdapter({
+      logger: {
+        level: process.env['LOG_LEVEL'] || 'info',
+        transport:
+          process.env['NODE_ENV'] !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+      },
+    }),
+  );
+
+  adminApp.setGlobalPrefix('api/v1/admin');
+
+  // CRITICAL: Admin binds ONLY to 127.0.0.1
+  const adminHost = '127.0.0.1';
+  const adminPort = parseInt(process.env['ADMIN_PORT'] || '8097', 10);
+
+  await adminApp.listen(adminPort, adminHost);
+  logger.log(`🔒 Omflix Admin API running on http://${adminHost}:${adminPort} (localhost only)`);
+}
+
+bootstrap().catch((err) => {
+  logger.error('Failed to start Omflix', err);
+  process.exit(1);
+});

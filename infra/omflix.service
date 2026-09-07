@@ -1,0 +1,29 @@
+[Unit]
+Description=Omflix Home Streaming Platform
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=idodi
+Group=idodi
+WorkingDirectory=/home/idodi/Projects/homeflix
+Environment=NODE_ENV=production
+EnvironmentFile=/home/idodi/Projects/homeflix/.env
+ExecStartPre=/usr/bin/docker compose -f /home/idodi/Projects/homeflix/docker-compose.yml up -d
+ExecStart=/usr/bin/node /home/idodi/Projects/homeflix/apps/server/dist/src/main.js
+ExecStop=/usr/bin/docker compose -f /home/idodi/Projects/homeflix/docker-compose.yml down
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=omflix
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/idodi/Projects/homeflix /media/windows/omflix /var/lib/omflix
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target

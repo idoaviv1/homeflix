@@ -1,0 +1,26 @@
+{
+  "name": "omflix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted private home streaming platform",
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "turbo run db:generate --filter=@omflix/database",
+    "db:migrate": "turbo run db:migrate --filter=@omflix/database",
+    "db:push": "turbo run db:push --filter=@omflix/database",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "prettier": "^3.5.0",
+    "turbo": "^2.10.0",
+    "typescript": "^5.8.0"
+  }
+}
