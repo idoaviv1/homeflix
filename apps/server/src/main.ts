@@ -62,7 +62,7 @@ async function bootstrap() {
   const publicPort = parseInt(process.env['PUBLIC_PORT'] || '8096', 10);
 
   await publicApp.listen(publicPort, publicHost);
-  logger.log(`🎬 Omflix Public API running on http://${publicHost}:${publicPort}`);
+  logger.log(`🎬 Homeflix Public API running on http://${publicHost}:${publicPort}`);
 
   // ── Admin Application (localhost only) ──
   const adminApp = await NestFactory.create<NestFastifyApplication>(
@@ -78,6 +78,11 @@ async function bootstrap() {
     }),
   );
 
+  adminApp.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   adminApp.setGlobalPrefix('api/v1/admin');
 
   // CRITICAL: Admin binds ONLY to 127.0.0.1
@@ -85,10 +90,10 @@ async function bootstrap() {
   const adminPort = parseInt(process.env['ADMIN_PORT'] || '8097', 10);
 
   await adminApp.listen(adminPort, adminHost);
-  logger.log(`🔒 Omflix Admin API running on http://${adminHost}:${adminPort} (localhost only)`);
+  logger.log(`🔒 Homeflix Admin API running on http://${adminHost}:${adminPort} (localhost only)`);
 }
 
 bootstrap().catch((err) => {
-  logger.error('Failed to start Omflix', err);
+  logger.error('Failed to start Homeflix', err);
   process.exit(1);
 });

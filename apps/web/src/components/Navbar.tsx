@@ -30,9 +30,9 @@ export function Navbar({
             <button
               onClick={() => onNavigate('home')}
               className="flex items-center gap-2 shrink-0 cursor-pointer"
-              aria-label="Omflix Home"
+              aria-label="Homeflix Home"
             >
-              <img src="/omflix-logo.svg" alt="Omflix" className="h-8 w-auto" />
+              <img src="/homeflix-logo.svg" alt="Homeflix" className="h-8 w-auto" />
             </button>
 
             {/* Center navigation — hidden on mobile */}

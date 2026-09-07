@@ -50,9 +50,9 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
         </button>
 
         <div className="text-center mb-6">
-          <span className="text-xs font-bold uppercase tracking-widest text-[#E50914]">OMFLIX</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[#E50914]">HOMEFLIX</span>
           <h2 className="text-2xl font-black mt-1">
-            {isRegister ? 'Create Your Account' : 'Sign In to Omflix'}
+            {isRegister ? 'Create Your Account' : 'Sign In to Homeflix'}
           </h2>
           <p className="text-xs text-neutral-400 mt-1">
             {isRegister

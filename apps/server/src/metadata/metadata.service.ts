@@ -364,7 +364,7 @@ export class MetadataService {
     return {
       title,
       year: year || new Date().getFullYear(),
-      overview: `${title} is a cinematic experience in your private Omflix library. Enjoy high-definition home streaming.`,
+      overview: `${title} is a cinematic experience in your private Homeflix library. Enjoy high-definition home streaming.`,
       posterPath: poster,
       backdropPath: backdrop,
       genres: ['Action', 'Drama'],
@@ -382,7 +382,7 @@ export class MetadataService {
     return {
       title,
       year: year || new Date().getFullYear(),
-      overview: `${title} is an acclaimed television series available on your Omflix server.`,
+      overview: `${title} is an acclaimed television series available on your Homeflix server.`,
       posterPath: poster,
       backdropPath: backdrop,
       genres: ['Drama', 'Sci-Fi'],

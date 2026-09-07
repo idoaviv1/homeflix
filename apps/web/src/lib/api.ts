@@ -144,6 +144,18 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   return json.data !== undefined ? json.data : json;
 }
 
+function getAdminUrl(endpoint: string): string {
+  if (typeof window !== 'undefined') {
+    const isLocal =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      return `http://127.0.0.1:8097${endpoint}`;
+    }
+  }
+  return endpoint;
+}
+
 export const api = {
   // Auth
   async getMe(): Promise<{ anonymous: boolean; user: User | null }> {
@@ -219,25 +231,25 @@ export const api = {
 
   // Admin (localhost only)
   async getAdminHealth(): Promise<any> {
-    return request('/api/v1/admin/health');
+    return request(getAdminUrl('/api/v1/admin/health'));
   },
   async getAdminSummary(): Promise<any> {
-    return request('/api/v1/admin/library/summary');
+    return request(getAdminUrl('/api/v1/admin/library/summary'));
   },
   async getAdminStreams(): Promise<any[]> {
-    return request('/api/v1/admin/streams');
+    return request(getAdminUrl('/api/v1/admin/streams'));
   },
   async getAdminSettings(): Promise<Record<string, string>> {
-    return request('/api/v1/admin/settings');
+    return request(getAdminUrl('/api/v1/admin/settings'));
   },
   async updateAdminSettings(settings: Record<string, string>): Promise<void> {
-    return request('/api/v1/admin/settings', {
+    return request(getAdminUrl('/api/v1/admin/settings'), {
       method: 'PUT',
       body: JSON.stringify(settings),
     });
   },
   async clearCache(): Promise<void> {
-    return request('/api/v1/admin/maintenance/clear-cache', { method: 'POST' });
+    return request(getAdminUrl('/api/v1/admin/maintenance/clear-cache'), { method: 'POST' });
   },
   async fixMatch(data: {
     mediaItemId: string;
@@ -245,7 +257,7 @@ export const api = {
     type: 'movie' | 'show';
     customAlias?: string;
   }): Promise<void> {
-    return request('/api/v1/admin/library/fix-match', {
+    return request(getAdminUrl('/api/v1/admin/library/fix-match'), {
       method: 'POST',
       body: JSON.stringify(data),
     });

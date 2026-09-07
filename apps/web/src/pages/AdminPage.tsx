@@ -122,7 +122,7 @@ export function AdminPage() {
             </span>
             <span className="text-xs text-neutral-400 font-mono">127.0.0.1:8097</span>
           </div>
-          <h1 className="text-3xl font-black tracking-tight mt-1">Omflix Server Control</h1>
+          <h1 className="text-3xl font-black tracking-tight mt-1">Homeflix Server Control</h1>
         </div>
 
         <div className="flex items-center gap-3">

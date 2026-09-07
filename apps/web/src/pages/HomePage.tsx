@@ -117,7 +117,7 @@ export function HomePage({ onOpenMedia, onPlay }: HomePageProps) {
             </div>
 
             <h1 className="text-4xl md:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-lg">
-              {hero ? hero.title : 'Welcome to Omflix'}
+              {hero ? hero.title : 'Welcome to Homeflix'}
             </h1>
 
             {hero?.tagline && (
@@ -182,13 +182,13 @@ export function HomePage({ onOpenMedia, onPlay }: HomePageProps) {
               <div>
                 <h3 className="text-xl font-bold text-white">Your Media Library Is Ready</h3>
                 <p className="text-xs text-neutral-400">
-                  Omflix looks for videos in <code className="text-neutral-200 bg-white/10 px-1.5 py-0.5 rounded">/media/windows/omflix/media/</code>
+                  Homeflix looks for videos in <code className="text-neutral-200 bg-white/10 px-1.5 py-0.5 rounded">/media/windows/omflix/media/</code>
                 </p>
               </div>
             </div>
 
             <p className="text-sm text-neutral-300">
-              Drop any MKV, MP4, or WebM movie or TV show file into your folders. Omflix will automatically inspect codecs with FFprobe, match metadata, and prepare Direct Play or NVENC transcoding!
+              Drop any MKV, MP4, or WebM movie or TV show file into your folders. Homeflix will automatically inspect codecs with FFprobe, match metadata, and prepare Direct Play or NVENC transcoding!
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -254,7 +254,7 @@ export function HomePage({ onOpenMedia, onPlay }: HomePageProps) {
         {/* Top Rated */}
         {feed?.topRated && feed.topRated.length > 0 && (
           <MediaRow
-            title="Top Rated on Omflix"
+            title="Top Rated on Homeflix"
             items={feed.topRated}
             numbered
             onSelect={onOpenMedia}

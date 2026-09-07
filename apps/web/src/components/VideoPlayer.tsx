@@ -385,7 +385,7 @@ export function VideoPlayer({
           <button
             onClick={onClose}
             className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            title="Back to Omflix"
+            title="Back to Homeflix"
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
