@@ -112,30 +112,35 @@ export function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F] text-white p-4 md:p-10 pt-24 max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#0F0F0F] text-white p-4 md:p-10 pt-28 md:pt-32 max-w-7xl mx-auto">
       {/* Admin Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-8 border-b border-white/10">
-        <div>
-          <div className="flex items-center gap-3">
-            <span className="px-2.5 py-0.5 rounded text-xs font-black uppercase bg-[#E50914] text-white">
-              ADMIN
-            </span>
-            <span className="text-xs text-neutral-400 font-mono">127.0.0.1:8097</span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-white/10">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-black tracking-tight text-white">Homeflix Server Control</h1>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-white/10 text-xs shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="font-semibold text-neutral-300">Local Loopback</span>
+              <span className="text-neutral-500">•</span>
+              <code className="text-emerald-400 font-mono font-medium">127.0.0.1:8097</code>
+            </div>
           </div>
-          <h1 className="text-3xl font-black tracking-tight mt-1">Homeflix Server Control</h1>
+          <p className="text-xs text-neutral-400">
+            Dedicated host control plane. Real-time hardware telemetry and media server settings.
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={loadData}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold transition-colors"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm font-semibold transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           <button
             onClick={handleTriggerScan}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-sm font-bold shadow-lg shadow-[#E50914]/30 transition-colors"
+            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-sm font-bold shadow-lg shadow-[#E50914]/30 transition-colors cursor-pointer"
           >
             <FolderSync className="w-4 h-4" />
             Scan Library

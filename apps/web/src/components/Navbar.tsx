@@ -69,25 +69,27 @@ export function Navbar({
               >
                 My List
               </button>
-              <button
-                onClick={() => onNavigate('admin')}
-                className={`flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded border transition-colors ${
-                  activeNav === 'admin'
-                    ? 'bg-[#E50914] text-white border-[#E50914]'
-                    : 'bg-white/5 text-neutral-300 border-white/10 hover:bg-white/15'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5 text-[#E50914]" />
-                Admin
-              </button>
             </div>
           </div>
 
           {/* Right actions */}
           <div className="flex items-center gap-3">
             <button
+              onClick={() => onNavigate('admin')}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                activeNav === 'admin'
+                  ? 'bg-[#E50914] text-white border-[#E50914] shadow-md shadow-[#E50914]/30'
+                  : 'bg-white/5 text-neutral-300 border-white/10 hover:bg-white/15'
+              }`}
+              title="Server Control Panel (127.0.0.1:8097)"
+            >
+              <Shield className="w-3.5 h-3.5 text-[#E50914]" />
+              <span>Admin</span>
+            </button>
+
+            <button
               onClick={onOpenSearch}
-              className="rounded-full p-2 text-neutral-400 hover:text-white transition-colors"
+              className="rounded-full p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
               aria-label="Search"
             >
               <Search className="h-5 w-5" />
