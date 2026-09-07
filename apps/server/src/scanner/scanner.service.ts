@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as chokidar from 'chokidar';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import {
   mediaItems,
   seasons,
@@ -536,6 +536,14 @@ export class ScannerService implements OnModuleInit, OnModuleDestroy {
         await this.handleFileRemoval(f.filePath);
       }
     }
+
+    // Mark any media items without associated files as inLibrary = false
+    await this.db.execute(sql`
+      UPDATE media_items
+      SET in_library = false, updated_at = NOW()
+      WHERE in_library = true
+        AND id NOT IN (SELECT DISTINCT media_item_id FROM media_files WHERE media_item_id IS NOT NULL)
+    `);
   }
 
   async fixMatch(mediaItemId: string, tmdbId: number, type: 'movie' | 'show', customAlias?: string) {

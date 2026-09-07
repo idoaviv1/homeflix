@@ -53,7 +53,14 @@ export function parseMediaFilename(filePath: string): ParsedMedia {
       }
     }
 
-    const { cleanTitle, year } = cleanTitleAndYear(rawShow);
+    const { cleanTitle, year: parsedYear } = cleanTitleAndYear(rawShow);
+    let year = parsedYear;
+    if (!year && parentDirName) {
+      const parentInfo = cleanTitleAndYear(parentDirName);
+      if (parentInfo.year) {
+        year = parentInfo.year;
+      }
+    }
     const cleanEpTitle = cleanEpisodeTitle(rawEpisodeTitle);
 
     return {

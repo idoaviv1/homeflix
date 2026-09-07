@@ -14,6 +14,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AdminModule } from './admin/admin.module';
+import { SpaFallbackFilter } from './common/filters/spa.filter';
 
 const logger = new Logger('Bootstrap');
 
@@ -50,9 +51,10 @@ async function bootstrap() {
     await publicApp.register(require('@fastify/static') as any, {
       root: webDistPath,
       prefix: '/',
-      wildcard: false,
+      wildcard: true,
       index: ['index.html'],
     });
+    publicApp.useGlobalFilters(new SpaFallbackFilter(webDistPath));
     logger.log(`📱 Serving Web UI from ${webDistPath}`);
   }
 
