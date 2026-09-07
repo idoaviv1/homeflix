@@ -27,6 +27,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
+*.pid
+.omflix.pid
 
 # Docker
 docker-data/

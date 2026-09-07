@@ -3,6 +3,11 @@ import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
+import { AuthModule } from './auth/auth.module';
+import { MetadataModule } from './metadata/metadata.module';
+import { ScannerModule } from './scanner/scanner.module';
+import { MediaModule } from './media/media.module';
+import { StreamingModule } from './streaming/streaming.module';
 
 @Module({
   imports: [
@@ -13,6 +18,11 @@ import { RedisModule } from './redis/redis.module';
     DatabaseModule,
     RedisModule,
     HealthModule,
+    AuthModule,
+    MetadataModule,
+    ScannerModule,
+    MediaModule,
+    StreamingModule,
   ],
 })
 export class AppModule {}

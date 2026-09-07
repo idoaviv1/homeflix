@@ -6,6 +6,8 @@
 //   2. Admin API on ADMIN_HOST:ADMIN_PORT (127.0.0.1:8097)
 // ============================================
 
+import * as path from 'path';
+import * as fs from 'fs';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -31,12 +33,28 @@ async function bootstrap() {
     }),
   );
 
+  await publicApp.register(require('@fastify/cookie') as any, {
+    secret: process.env['SESSION_SECRET'] || 'omflix-cookie-secret-key-development',
+  });
+
   publicApp.enableCors({
     origin: true, // Allow same-network origins
     credentials: true,
   });
 
   publicApp.setGlobalPrefix('api/v1');
+
+  // Serve production Web UI assets if built
+  const webDistPath = path.resolve(__dirname, '../../../../apps/web/dist');
+  if (fs.existsSync(webDistPath)) {
+    await publicApp.register(require('@fastify/static') as any, {
+      root: webDistPath,
+      prefix: '/',
+      wildcard: false,
+      index: ['index.html'],
+    });
+    logger.log(`📱 Serving Web UI from ${webDistPath}`);
+  }
 
   const publicHost = process.env['PUBLIC_HOST'] || '0.0.0.0';
   const publicPort = parseInt(process.env['PUBLIC_PORT'] || '8096', 10);

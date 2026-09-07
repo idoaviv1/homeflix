@@ -47,10 +47,12 @@ case "${1:-help}" in
 
     # Start the server
     cd "$SCRIPT_DIR"
-    if [ -f "apps/server/dist/main.js" ]; then
-      log "Starting Omflix server..."
-      node apps/server/dist/main.js &
-      echo $! > "$SCRIPT_DIR/.omflix.pid"
+    if [ -f "apps/server/dist/src/main.js" ]; then
+      log "Starting Omflix server daemon..."
+      nohup node apps/server/dist/src/main.js >> "$SCRIPT_DIR/omflix-server.log" 2>&1 &
+      SERVER_PID=$!
+      echo "$SERVER_PID" > "$SCRIPT_DIR/.omflix.pid"
+      disown "$SERVER_PID" 2>/dev/null || true
     else
       warn "Server not built. Run './omflix build' first or use './omflix dev' for development."
     fi
@@ -148,7 +150,7 @@ case "${1:-help}" in
 
   scan)
     log "Triggering library scan..."
-    curl -sf "http://localhost:${PUBLIC_PORT}/api/v1/library/scan" -X POST || error "Failed to trigger scan"
+    curl -sf "http://localhost:${PUBLIC_PORT}/api/v1/scanner/scan" -X POST || error "Failed to trigger scan"
     ;;
 
   *)
