@@ -278,7 +278,7 @@ export class ScannerService implements OnModuleInit, OnModuleDestroy {
             tagline: meta.tagline,
             releaseDate: meta.releaseDate,
             year: meta.year || year,
-            runtime: meta.runtime || Math.round(probe.duration / 60),
+            runtime: meta.runtime || (probe.duration && !isNaN(probe.duration) ? Math.round(probe.duration / 60) : undefined),
             rating: meta.rating,
             voteCount: meta.voteCount,
             popularity: meta.popularity,
@@ -548,9 +548,9 @@ export class ScannerService implements OnModuleInit, OnModuleDestroy {
 
   async fixMatch(mediaItemId: string, tmdbId: number, type: 'movie' | 'show', customAlias?: string) {
     let meta;
+    const apiKey = this.config.get('TMDB_API_KEY');
     if (type === 'movie') {
       const detailsUrl = new URL(`https://api.themoviedb.org/3/movie/${tmdbId}`);
-      const apiKey = this.config.get('TMDB_API_KEY');
       if (apiKey) detailsUrl.searchParams.set('api_key', apiKey);
       const res = await fetch(detailsUrl.toString());
       const data = res.ok ? ((await res.json()) as any) : null;
@@ -562,6 +562,22 @@ export class ScannerService implements OnModuleInit, OnModuleDestroy {
           backdropPath: data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : undefined,
           releaseDate: data.release_date,
           year: data.release_date ? parseInt(data.release_date.split('-')[0], 10) : undefined,
+          rating: data.vote_average,
+        };
+      }
+    } else {
+      const detailsUrl = new URL(`https://api.themoviedb.org/3/tv/${tmdbId}`);
+      if (apiKey) detailsUrl.searchParams.set('api_key', apiKey);
+      const res = await fetch(detailsUrl.toString());
+      const data = res.ok ? ((await res.json()) as any) : null;
+      if (data) {
+        meta = {
+          title: data.name,
+          overview: data.overview,
+          posterPath: data.poster_path ? `https://image.tmdb.org/t/p/w780${data.poster_path}` : undefined,
+          backdropPath: data.backdrop_path ? `https://image.tmdb.org/t/p/w1280${data.backdrop_path}` : undefined,
+          releaseDate: data.first_air_date,
+          year: data.first_air_date ? parseInt(data.first_air_date.split('-')[0], 10) : undefined,
           rating: data.vote_average,
         };
       }

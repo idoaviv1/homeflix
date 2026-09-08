@@ -185,3 +185,310 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================
+   Light Mode Theme Overrides
+   ============================================ */
+
+html.light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.light .bg-\[\#0F0F0F\],
+html.light .bg-\[\#0a0a0a\],
+html.light .bg-\[\#121212\],
+html.light .bg-black {
+  background-color: #f8fafc;
+}
+
+/* Keep video playback and streaming modals dark */
+html.light .fixed.z-\[100\],
+html.light .fixed.z-\[100\] *,
+html.light .video-player-container,
+html.light .video-player-container * {
+  color: inherit;
+}
+
+html.light .glass-heavy {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+html.light header {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+html.light .text-white {
+  color: #0f172a;
+}
+
+html.light .text-neutral-300 {
+  color: #334155;
+}
+
+html.light .text-neutral-400 {
+  color: #64748b;
+}
+
+html.light .text-neutral-500 {
+  color: #94a3b8;
+}
+
+html.light .border-white\/10,
+html.light .border-white\/5,
+html.light .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+html.light .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+html.light .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+html.light .bg-white\/15,
+html.light .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+html.light .bg-neutral-900 {
+  background-color: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+html.light .bg-neutral-950 {
+  background-color: #f1f5f9;
+}
+
+/* Ensure red brand buttons always keep white text */
+button.bg-\[\#E50914\],
+.bg-\[\#E50914\],
+.bg-\[\#E50914\] * {
+  color: #ffffff !important;
+}
+
+html.light .card-hover:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* ============================================
+   Enhanced Micro-Animations & Interactivity
+   ============================================ */
+
+/* 1. Modal Animations */
+@keyframes modalBackdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(16px);
+  }
+}
+
+@keyframes modalSheetSlideUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.93) translateY(32px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.01) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-sheet {
+  animation: modalSheetSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 2. Heart & Check Button Animations */
+@keyframes heartBurst {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.4) rotate(-12deg);
+    filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.9));
+  }
+  50% {
+    transform: scale(0.88) rotate(6deg);
+  }
+  75% {
+    transform: scale(1.15) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0.6) rotate(-30deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3) rotate(8deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.8));
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.animate-heart-burst {
+  animation: heartBurst 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-check-pop {
+  animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 3. Ripple & Glow on Click */
+.btn-interactive {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-interactive:hover {
+  transform: translateY(-2px);
+}
+
+.btn-interactive:active {
+  transform: scale(0.93) translateY(0);
+}
+
+/* 4. Staggered Content Reveals */
+@keyframes cascadeFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-cascade-1 {
+  animation: cascadeFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
+  opacity: 0;
+}
+
+.animate-cascade-2 {
+  animation: cascadeFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  opacity: 0;
+}
+
+.animate-cascade-3 {
+  animation: cascadeFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+  opacity: 0;
+}
+
+.animate-cascade-4 {
+  animation: cascadeFadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.28s forwards;
+  opacity: 0;
+}
+
+/* 5. Floating Toast Notification */
+@keyframes toastSlideIn {
+  0% {
+    transform: translateY(30px) scale(0.9);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-4px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toastSlideOut {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(24px) scale(0.92);
+    opacity: 0;
+  }
+}
+
+.animate-toast-in {
+  animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-out {
+  animation: toastSlideOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 6. Card Shimmer & Sheen Effect */
+.card-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-sheen::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 65%
+  );
+  transform: rotate(25deg) translateY(-100%);
+  transition: transform 0.75s ease-out;
+  pointer-events: none;
+}
+
+.card-sheen:hover::after {
+  transform: rotate(25deg) translateY(100%);
+}
+
+/* 7. Scroll Row In-View Reveal */
+.row-scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.row-scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+

@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { ScannerService } from './scanner.service';
+import { AdminGuard } from '../common/guards/admin.guard';
 
 @Controller('scanner')
 export class ScannerController {
@@ -14,6 +15,7 @@ export class ScannerController {
   }
 
   @Post('scan')
+  @UseGuards(AdminGuard)
   async triggerScan() {
     // Run in background so request doesn't timeout
     this.scannerService.scanAll().catch(() => {});
@@ -27,6 +29,7 @@ export class ScannerController {
   }
 
   @Post('fix-match')
+  @UseGuards(AdminGuard)
   async fixMatch(
     @Body() body: { mediaItemId: string; tmdbId: number; type: 'movie' | 'show'; customAlias?: string },
   ) {

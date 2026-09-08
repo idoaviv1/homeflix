@@ -11,22 +11,86 @@ import {
   Sparkles,
   Volume2,
   Tv,
+  Globe,
+  Download,
+  Smartphone,
+  FolderOpen,
+  Loader2,
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 import { api, type MediaItem, type Season, type Episode, type MediaFile } from '../lib/api';
+import { OnlineStreamModal } from './OnlineStreamModal';
+import { DownloadModal } from './DownloadModal';
+import { SubtitlePickerModal } from './SubtitlePickerModal';
+import { useThemeLanguage } from '../context/ThemeLanguageContext';
 
 export interface MediaModalProps {
   mediaId: string;
   onClose: () => void;
   onPlay: (file: MediaFile, title: string, subtitle?: string, nextEpisode?: any) => void;
+  onPlayLocalFile?: (file: File) => void;
 }
 
-export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
+export function MediaModal({ mediaId, onClose, onPlay, onPlayLocalFile }: MediaModalProps) {
+  const { t, language, showToast } = useThemeLanguage();
   const [media, setMedia] = useState<MediaItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [selectedEpisode, setSelectedEpisode] = useState<number>(1);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [watchlistAnimating, setWatchlistAnimating] = useState(false);
+  const [favoriteAnimating, setFavoriteAnimating] = useState(false);
   const [showTrailer, setShowTrailer] = useState(false);
+  const [trailerLoading, setTrailerLoading] = useState(false);
+  const [showOnlineStream, setShowOnlineStream] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showSandboxDownloadModal, setShowSandboxDownloadModal] = useState(false);
+  const [sandboxDownloadTarget, setSandboxDownloadTarget] = useState<{
+    file: MediaFile;
+    title: string;
+    episodeId?: string;
+  } | null>(null);
+
+  const isNative = Capacitor.isNativePlatform();
+
+  const handlePickAndPlayLocalPCFile = async () => {
+    try {
+      if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {
+        const [handle] = await (window as any).showOpenFilePicker({
+          types: [
+            {
+              description: 'Video Files (MP4, MKV, WebM, AVI, MOV)',
+              accept: {
+                'video/*': ['.mp4', '.mkv', '.webm', '.avi', '.mov'],
+              },
+            },
+          ],
+        });
+        const file = await handle.getFile();
+        if (onPlayLocalFile) {
+          onClose();
+          onPlayLocalFile(file);
+        }
+      } else {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'video/*,.mkv,.mp4,.avi,.mov';
+        input.onchange = (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file && onPlayLocalFile) {
+            onClose();
+            onPlayLocalFile(file);
+          }
+        };
+        input.click();
+      }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        console.error('Local file selection error:', err);
+      }
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -54,20 +118,73 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
   }, [mediaId]);
 
   const handleToggleWatchlist = async () => {
+    setWatchlistAnimating(true);
+    setTimeout(() => setWatchlistAnimating(false), 500);
+    const nextState = !inWatchlist;
+    setInWatchlist(nextState);
+
     try {
       const res = await api.toggleWatchlist(mediaId);
-      setInWatchlist(res.inWatchlist);
-    } catch {
-      // Prompt login if anonymous
+      if (res && typeof res.inWatchlist === 'boolean') {
+        setInWatchlist(res.inWatchlist);
+        showToast(
+          res.inWatchlist ? t('addedToWatchlist') : t('removedFromWatchlistToast'),
+          'success'
+        );
+      }
+    } catch (err) {
+      setInWatchlist(!nextState);
+      showToast(
+        language === 'he'
+          ? 'יש להתחבר כדי לשמור ברשימת הצפייה'
+          : 'Please sign in to save to your watchlist',
+        'error'
+      );
     }
   };
 
   const handleToggleFavorite = async () => {
+    setFavoriteAnimating(true);
+    setTimeout(() => setFavoriteAnimating(false), 600);
+    const nextState = !isFavorite;
+    setIsFavorite(nextState);
+    showToast(
+      nextState ? t('addedToFavoritesToast') : t('removedFromFavoritesToast'),
+      'heart'
+    );
     try {
       const res = await api.toggleFavorite(mediaId);
-      setIsFavorite(res.isFavorite);
+      if (res && typeof res.isFavorite === 'boolean') {
+        setIsFavorite(res.isFavorite);
+      }
+    } catch (err) {
+      console.warn('Favorite toggle error:', err);
+    }
+  };
+
+  const handleTrailerClick = async () => {
+    if (!media) return;
+    if (media.trailerKey) {
+      setShowTrailer(true);
+      return;
+    }
+    setTrailerLoading(true);
+    try {
+      const res = await api.getTrailer(media.id, {
+        title: media.title,
+        year: media.year || undefined,
+        tmdbId: media.tmdbId,
+      });
+      if (res?.trailerKey) {
+        setMedia((prev) => (prev ? { ...prev, trailerKey: res.trailerKey || undefined } : prev));
+        setShowTrailer(true);
+      } else {
+        showToast(language === 'he' ? 'לא נמצא טריילר זמין לסרט זה' : 'No trailer available for this title', 'error');
+      }
     } catch {
-      // Prompt login if anonymous
+      showToast(language === 'he' ? 'שגיאה בטעינת הטריילר' : 'Error loading trailer', 'error');
+    } finally {
+      setTrailerLoading(false);
     }
   };
 
@@ -85,12 +202,12 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
   const primaryFile = media.files?.[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-6 overflow-y-auto animate-in fade-in">
-      <div className="relative w-full max-w-4xl bg-[#141414] border border-white/10 rounded-2xl overflow-hidden shadow-2xl my-auto text-white">
+    <div className="fixed inset-0 z-50 bg-black/80 animate-modal-backdrop flex items-center justify-center p-2 md:p-6 overflow-y-auto">
+      <div className="relative w-full max-w-4xl bg-[#141414] border border-white/10 rounded-2xl overflow-hidden shadow-2xl my-auto text-white animate-modal-sheet">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors border border-white/10"
+          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all duration-300 hover:rotate-90 border border-white/10 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -98,12 +215,23 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
         {/* ─── Hero Backdrop Banner ─── */}
         <div className="relative h-72 md:h-96 w-full overflow-hidden">
           {showTrailer && media.trailerKey ? (
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${media.trailerKey}?autoplay=1&controls=1`}
-              title="Trailer"
-              allow="autoplay; encrypted-media"
-              className="w-full h-full border-0"
-            />
+            <div className="relative w-full h-full bg-black">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${media.trailerKey}?autoplay=1&controls=1&rel=0`}
+                title="Trailer"
+                allow="autoplay; encrypted-media; fullscreen"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+              <button
+                onClick={() => setShowTrailer(false)}
+                className="absolute top-4 left-4 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/80 hover:bg-black text-white text-xs font-semibold backdrop-blur-md border border-white/20 shadow-lg cursor-pointer transition-all active:scale-95"
+                title={language === 'he' ? 'חזור לתמונת הסרט' : 'Back to Banner'}
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>{language === 'he' ? 'חזור לתמונה' : 'Back to Banner'}</span>
+              </button>
+            </div>
           ) : (
             <>
               <img
@@ -115,55 +243,157 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
               <div className="absolute inset-0 bg-gradient-to-r from-[#141414]/90 via-transparent to-transparent" />
 
               {/* Title & Actions inside Backdrop */}
-              <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end">
-                <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight drop-shadow-md">
-                  {media.title}
-                </h1>
-                {media.titleHe && (
-                  <h2 className="text-lg md:text-xl text-neutral-300 font-medium drop-shadow" dir="rtl">
-                    {media.titleHe}
-                  </h2>
-                )}
+              <div className="absolute bottom-6 left-6 right-6 flex flex-col justify-end animate-cascade-1">
+                {(() => {
+                  const isHebrew = language === 'he';
+                  const hasHebrew = Boolean(media.titleHe);
+                  const englishTitle = media.title || media.originalTitle || '';
+                  const hasBothTitles = Boolean(hasHebrew && englishTitle && media.titleHe !== englishTitle);
+
+                  const displayTitle = isHebrew
+                    ? (media.titleHe || englishTitle)
+                    : (englishTitle || media.titleHe);
+
+                  const displaySubtitle = hasBothTitles
+                    ? (isHebrew ? englishTitle : media.titleHe)
+                    : null;
+
+                  const titleDir = isHebrew ? (media.titleHe ? 'rtl' : 'ltr') : 'ltr';
+                  const subtitleDir = isHebrew ? 'ltr' : 'rtl';
+
+                  return (
+                    <>
+                      <h1
+                        className="text-3xl md:text-5xl font-extrabold tracking-tight drop-shadow-md"
+                        dir={titleDir}
+                      >
+                        {displayTitle}
+                      </h1>
+                      {displaySubtitle && (
+                        <h2 className="text-lg md:text-xl text-neutral-300 font-medium drop-shadow mt-1" dir={subtitleDir}>
+                          {displaySubtitle}
+                        </h2>
+                      )}
+                    </>
+                  );
+                })()}
                 {media.tagline && (
                   <p className="text-sm italic text-neutral-300 mt-1 drop-shadow">{media.tagline}</p>
                 )}
 
                 {/* Primary Action Buttons */}
-                <div className="flex flex-wrap items-center gap-3 mt-4">
+                <div className="flex flex-wrap items-center gap-3 mt-4 animate-cascade-2">
                   {primaryFile && (
                     <button
                       onClick={() => onPlay(primaryFile, media.title)}
-                      className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black font-bold text-sm hover:bg-neutral-200 transition-colors shadow-lg active:scale-95"
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black font-bold text-sm hover:bg-neutral-200 transition-all shadow-lg active:scale-95 cursor-pointer btn-interactive"
                     >
                       <Play className="w-5 h-5 fill-current" />
-                      Play
+                      {t('playLocal')}
                     </button>
                   )}
 
-                  {media.trailerKey && !showTrailer && (
-                    <button
-                      onClick={() => setShowTrailer(true)}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm backdrop-blur-sm transition-colors border border-white/10"
-                    >
-                      <Film className="w-4 h-4" />
-                      Trailer
-                    </button>
-                  )}
-
+                  {/* Direct Online Streaming Button */}
                   <button
-                    onClick={handleToggleWatchlist}
-                    className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/10"
-                    title={inWatchlist ? 'Remove from My List' : 'Add to My List'}
+                    onClick={() => setShowOnlineStream(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-white font-bold text-sm shadow-lg shadow-red-600/30 active:scale-95 transition-all cursor-pointer btn-interactive"
                   >
-                    {inWatchlist ? <Check className="w-5 h-5 text-emerald-400" /> : <Plus className="w-5 h-5" />}
+                    <Globe className="w-4 h-4" />
+                    {t('watchOnline')}
                   </button>
 
+                  {/* In-App Offline Sandbox Download Button - ONLY in native mobile app */}
+                  {isNative && primaryFile && (
+                    <button
+                      onClick={() => {
+                        setSandboxDownloadTarget({
+                          file: primaryFile,
+                          title: language === 'he' && media.titleHe ? media.titleHe : media.title,
+                        });
+                        setShowSandboxDownloadModal(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-sm backdrop-blur-sm transition-all border border-emerald-500/30 cursor-pointer btn-interactive active:scale-95"
+                      title={language === 'he' ? 'הורדה פנימית לאפליקציה (לצפייה אופליין)' : 'Download to app for offline viewing'}
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      <span>{language === 'he' ? 'הורד למכשיר' : 'Download to Device'}</span>
+                    </button>
+                  )}
+
+                  {/* Pick & Play Local File on Computer (Website with browser permission) */}
+                  {!isNative && onPlayLocalFile && (
+                    <button
+                      onClick={handlePickAndPlayLocalPCFile}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold text-sm backdrop-blur-sm transition-all border border-amber-500/30 cursor-pointer btn-interactive active:scale-95"
+                      title={language === 'he' ? 'בחר קובץ סרט מהמחשב ונגן ישירות בנגן (דורש הרשאה)' : 'Pick movie file from computer and play in player (requires permission)'}
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      <span>{language === 'he' ? 'פתח קובץ מהמחשב' : 'Open PC File'}</span>
+                    </button>
+                  )}
+
+                  {/* Download to Server Button */}
+                  <button
+                    onClick={() => setShowDownloadModal(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm backdrop-blur-sm transition-all border border-white/10 cursor-pointer btn-interactive active:scale-95"
+                    title={t('download')}
+                  >
+                    <Download className="w-4 h-4" />
+                    {t('download')}
+                  </button>
+
+                  {!showTrailer && (
+                    <button
+                      onClick={handleTrailerClick}
+                      disabled={trailerLoading}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-sm backdrop-blur-sm transition-all border border-white/10 cursor-pointer btn-interactive active:scale-95 disabled:opacity-50"
+                      title={t('trailer')}
+                    >
+                      {trailerLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E50914]" />
+                      ) : (
+                        <Film className="w-4 h-4" />
+                      )}
+                      <span>
+                        {trailerLoading
+                          ? (language === 'he' ? 'טוען טריילר...' : 'Loading...')
+                          : t('trailer')}
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Watchlist Toggle Button with Check Pop */}
+                  <button
+                    onClick={handleToggleWatchlist}
+                    className={`p-2.5 rounded-lg transition-all duration-300 border cursor-pointer btn-interactive ${
+                      inWatchlist
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                        : 'bg-white/10 hover:bg-white/20 text-white border-white/10 hover:border-white/20'
+                    }`}
+                    title={inWatchlist ? t('removeFromWatchlist') : t('addToWatchlist')}
+                  >
+                    {inWatchlist ? (
+                      <Check className={`w-5 h-5 ${watchlistAnimating ? 'animate-check-pop' : ''}`} />
+                    ) : (
+                      <Plus className="w-5 h-5 transition-transform group-hover:rotate-90" />
+                    )}
+                  </button>
+
+                  {/* Favorites Toggle Button with Heart Burst */}
                   <button
                     onClick={handleToggleFavorite}
-                    className="p-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors border border-white/10"
-                    title={isFavorite ? 'Favorited' : 'Add to Favorites'}
+                    className={`p-2.5 rounded-lg transition-all duration-300 border cursor-pointer btn-interactive ${
+                      isFavorite
+                        ? 'bg-red-500/20 text-red-500 border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.45)]'
+                        : 'bg-white/10 hover:bg-white/20 text-white border-white/10 hover:border-white/20'
+                    }`}
+                    title={isFavorite ? t('isFavorite') : t('addToFavorites')}
                   >
-                    <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`} />
+                    <Heart
+                      className={`w-5 h-5 transition-all ${
+                        isFavorite ? 'fill-red-500 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''
+                      } ${favoriteAnimating ? 'animate-heart-burst' : ''}`}
+                    />
                   </button>
                 </div>
               </div>
@@ -172,7 +402,7 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
         </div>
 
         {/* ─── Details Section ─── */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 animate-cascade-3">
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-300">
             {media.rating && (
@@ -214,14 +444,14 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
 
           {/* Overview */}
           <div className="space-y-2">
-            <p className="text-sm md:text-base text-neutral-300 leading-relaxed">
-              {media.overview || 'No synopsis available.'}
+            <p
+              className="text-sm md:text-base text-neutral-300 leading-relaxed"
+              dir={language === 'he' ? 'rtl' : 'ltr'}
+            >
+              {(language === 'he'
+                ? (media.overviewHe || media.overview)
+                : (media.overview || media.overviewHe)) || t('noSynopsis')}
             </p>
-            {media.overviewHe && (
-              <p className="text-sm text-neutral-400 leading-relaxed pt-2 border-t border-white/5" dir="rtl">
-                {media.overviewHe}
-              </p>
-            )}
           </div>
 
           {/* Genres */}
@@ -244,7 +474,7 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold flex items-center gap-2">
                   <Tv className="w-5 h-5 text-[#E50914]" />
-                  Episodes
+                  {t('episodes')}
                 </h3>
 
                 {/* Season Picker */}
@@ -256,7 +486,7 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
                   >
                     {media.seasons.map((s) => (
                       <option key={s.id} value={s.seasonNumber}>
-                        {s.name || `Season ${s.seasonNumber}`}
+                        {t('season')} {s.seasonNumber}
                       </option>
                     ))}
                   </select>
@@ -300,28 +530,58 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
                         </div>
                       </div>
 
-                      {epFile && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {epFile && (
+                          <button
+                            onClick={() =>
+                              onPlay(
+                                epFile,
+                                media.title,
+                                `S${ep.seasonNumber}:E${ep.episodeNumber} ${ep.title}`,
+                                nextEp?.mediaFile
+                                  ? {
+                                      episodeId: nextEp.id,
+                                      title: `S${nextEp.seasonNumber}:E${nextEp.episodeNumber} ${nextEp.title}`,
+                                      file: nextEp.mediaFile,
+                                    }
+                                  : undefined,
+                              )
+                            }
+                            className="p-3 rounded-full bg-white text-black hover:bg-neutral-200 transition-colors shadow-md flex-shrink-0 cursor-pointer"
+                            title={t('playLocal')}
+                          >
+                            <Play className="w-4 h-4 fill-current" />
+                          </button>
+                        )}
+
+                        {isNative && epFile && (
+                          <button
+                            onClick={() => {
+                              setSandboxDownloadTarget({
+                                file: epFile,
+                                title: `${media.title} - S${ep.seasonNumber}:E${ep.episodeNumber}`,
+                                episodeId: ep.id,
+                              });
+                              setShowSandboxDownloadModal(true);
+                            }}
+                            className="p-2.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all shadow-md flex-shrink-0 cursor-pointer"
+                            title={language === 'he' ? 'הורד פרק זה לאפליקציה לצפייה אופליין' : 'Download episode for offline playback'}
+                          >
+                            <Smartphone className="w-4 h-4" />
+                          </button>
+                        )}
+
                         <button
-                          onClick={() =>
-                            onPlay(
-                              epFile,
-                              media.title,
-                              `S${ep.seasonNumber}:E${ep.episodeNumber} ${ep.title}`,
-                              nextEp?.mediaFile
-                                ? {
-                                    episodeId: nextEp.id,
-                                    title: `S${nextEp.seasonNumber}:E${nextEp.episodeNumber} ${nextEp.title}`,
-                                    file: nextEp.mediaFile,
-                                  }
-                                : undefined,
-                            )
-                          }
-                          className="p-3 rounded-full bg-white text-black hover:bg-neutral-200 transition-colors shadow-md flex-shrink-0"
-                          title="Play Episode"
+                          onClick={() => {
+                            setSelectedEpisode(ep.episodeNumber);
+                            setShowOnlineStream(true);
+                          }}
+                          className="p-2.5 rounded-full bg-red-600/20 text-[#E50914] border border-[#E50914]/40 hover:bg-[#E50914] hover:text-white transition-all shadow-md flex-shrink-0 cursor-pointer"
+                          title={t('watchOnline')}
                         >
-                          <Play className="w-4 h-4 fill-current" />
+                          <Globe className="w-4 h-4" />
                         </button>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -332,7 +592,7 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
           {/* Cast Cards */}
           {media.cast && media.cast.length > 0 && (
             <div className="pt-4 border-t border-white/10 space-y-3">
-              <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider">Cast</h3>
+              <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-wider">{t('cast')}</h3>
               <div className="flex gap-4 overflow-x-auto pb-2">
                 {media.cast.slice(0, 8).map((c) => (
                   <div key={c.name} className="flex-shrink-0 w-24 text-center">
@@ -350,6 +610,54 @@ export function MediaModal({ mediaId, onClose, onPlay }: MediaModalProps) {
           )}
         </div>
       </div>
+
+      {/* Online Streaming Player Modal */}
+      {showOnlineStream && (
+        <OnlineStreamModal
+          title={language === 'he' && media.titleHe ? media.titleHe : (media.title || media.originalTitle || '')}
+          tmdbId={media.tmdbId}
+          imdbId={media.imdbId}
+          type={media.type}
+          season={selectedSeason}
+          episode={selectedEpisode}
+          seasonsCount={media.seasons?.length}
+          onClose={() => setShowOnlineStream(false)}
+        />
+      )}
+
+      {/* Download to Server Modal */}
+      {showDownloadModal && (
+        <DownloadModal
+          title={media.title}
+          tmdbId={media.tmdbId}
+          imdbId={media.imdbId}
+          year={media.year}
+          primaryFileId={primaryFile?.id}
+          onOpenOnlineStream={() => setShowOnlineStream(true)}
+          onPlayLocalFile={onPlayLocalFile}
+          onClose={() => setShowDownloadModal(false)}
+        />
+      )}
+
+      {/* In-App Offline Sandbox Download Subtitle Picker Modal */}
+      {showSandboxDownloadModal && sandboxDownloadTarget && (
+        <SubtitlePickerModal
+          isOpen={showSandboxDownloadModal}
+          onClose={() => {
+            setShowSandboxDownloadModal(false);
+            setSandboxDownloadTarget(null);
+          }}
+          mediaItemId={media.id}
+          episodeId={sandboxDownloadTarget.episodeId}
+          title={sandboxDownloadTarget.title}
+          titleHe={media.titleHe}
+          originalTitle={media.originalTitle}
+          year={media.year}
+          overview={media.overview}
+          posterPath={media.posterPath || media.backdropPath}
+          file={sandboxDownloadTarget.file}
+        />
+      )}
     </div>
   );
 }

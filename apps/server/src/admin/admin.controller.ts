@@ -7,6 +7,7 @@ import {
   Body,
   Inject,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -26,8 +27,10 @@ import { REDIS_TOKEN } from '../redis/redis.module';
 import { StreamingService } from '../streaming/streaming.service';
 import { ScannerService } from '../scanner/scanner.service';
 import { MetadataService } from '../metadata/metadata.service';
+import { AdminGuard } from '../common/guards/admin.guard';
 
-@Controller()
+@Controller('admin')
+@UseGuards(AdminGuard)
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 

@@ -8,24 +8,33 @@ import { Navbar } from '../components/Navbar';
 import { MobileNav } from '../components/MobileNav';
 import { HomePage } from '../pages/HomePage';
 import { AdminPage } from '../pages/AdminPage';
+import { OfflinePage } from '../pages/OfflinePage';
+import { WatchHistoryPage } from '../pages/WatchHistoryPage';
 import { MediaModal } from '../components/MediaModal';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { SearchOverlay } from '../components/SearchOverlay';
 import { AuthModal } from '../components/AuthModal';
+import { OfflineBanner } from '../components/OfflineBanner';
+import { DeviceSimulator } from '../components/DeviceSimulator';
 import { api, type User, type MediaFile, type MediaItem } from '../lib/api';
+import { type OfflineMediaItem } from '../lib/offlineStorage';
+import { ThemeLanguageProvider, useThemeLanguage } from '../context/ThemeLanguageContext';
+import { Smartphone, Shield } from 'lucide-react';
 
 export interface RouterContext {
   queryClient: QueryClient;
 }
 
 function MainApp() {
+  const { t, language } = useThemeLanguage();
   const [user, setUser] = useState<User | null>(null);
   const [activeNav, setActiveNav] = useState('home');
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
 
-  // Player state
+  // Online Player state
   const [playerData, setPlayerData] = useState<{
     mediaItemId: string;
     episodeId?: string;
@@ -33,7 +42,14 @@ function MainApp() {
     title: string;
     subtitle?: string;
     nextEpisode?: any;
+    initialTime?: number;
   } | null>(null);
+
+  // Offline Player state
+  const [offlinePlayerData, setOfflinePlayerData] = useState<OfflineMediaItem | null>(null);
+
+  // Local PC File Player state (Blob URL from file picker with user permission)
+  const [localFilePlayer, setLocalFilePlayer] = useState<{ url: string; title: string } | null>(null);
 
   // Category browse items (movies / shows / watchlist)
   const [browseItems, setBrowseItems] = useState<MediaItem[]>([]);
@@ -87,6 +103,7 @@ function MainApp() {
     title: string,
     subtitle?: string,
     nextEpisode?: any,
+    initialTime?: number,
   ) => {
     setPlayerData({
       mediaItemId: file.mediaItemId,
@@ -95,12 +112,25 @@ function MainApp() {
       title,
       subtitle,
       nextEpisode,
+      initialTime,
     });
     setSelectedMediaId(null);
   };
 
-  return (
-    <div className="min-h-dvh bg-[#0F0F0F] text-white">
+  const handlePlayOffline = (item: OfflineMediaItem) => {
+    setOfflinePlayerData(item);
+    setSelectedMediaId(null);
+  };
+
+  const handlePlayLocalPCFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const title = file.name.replace(/\.[^/.]+$/, '');
+    setLocalFilePlayer({ url, title });
+    setSelectedMediaId(null);
+  };
+
+  const content = (
+    <div className="min-h-dvh bg-[#0F0F0F] text-white flex flex-col">
       {/* Top Navbar */}
       <Navbar
         user={user}
@@ -112,20 +142,71 @@ function MainApp() {
       />
 
       {/* Main Content Area */}
-      <main className="pb-20 md:pb-0">
+      <main className="flex-1 pb-20 md:pb-0">
         {activeNav === 'home' && (
           <HomePage
+            user={user}
             onOpenMedia={(id) => setSelectedMediaId(id)}
-            onPlay={(file, title, subtitle) => handlePlay(file, title, subtitle)}
+            onPlay={(file, title, subtitle, initialTime) => handlePlay(file, title, subtitle, undefined, initialTime)}
           />
         )}
 
-        {activeNav === 'admin' && <AdminPage />}
+        {/* Watch History for logged in users */}
+        {activeNav === 'history' && (
+          <WatchHistoryPage
+            onOpenMedia={(id) => setSelectedMediaId(id)}
+            onPlay={(file, title, subtitle, initialTime) =>
+              handlePlay(file, title, subtitle, undefined, initialTime)
+            }
+            onBrowseLibrary={() => setActiveNav('home')}
+          />
+        )}
+
+        {/* Admin Page - strictly guarded for admin role */}
+        {activeNav === 'admin' && (
+          user?.role === 'admin' ? (
+            <AdminPage />
+          ) : (
+            <div className="pt-36 pb-24 px-4 max-w-lg mx-auto text-center animate-in fade-in">
+              <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 text-[#E50914] flex items-center justify-center mx-auto mb-5 shadow-lg shadow-red-950/40">
+                <Shield className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">
+                {t('adminAccessRequired')}
+              </h2>
+              <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+                {t('adminOnlyNotice')}
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => setActiveNav('home')}
+                  className="px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all border border-white/10 cursor-pointer"
+                >
+                  {language === 'he' ? 'חזור לעמוד הבית' : 'Back to Home'}
+                </button>
+                <button
+                  onClick={() => setAuthOpen(true)}
+                  className="px-5 py-2.5 rounded-lg bg-[#E50914] hover:bg-[#b80710] text-white text-xs font-bold shadow-lg shadow-red-600/30 transition-all cursor-pointer"
+                >
+                  {language === 'he' ? 'התחבר כמנהל' : 'Sign In as Admin'}
+                </button>
+              </div>
+            </div>
+          )
+        )}
+
+        {activeNav === 'downloads' && (
+          <OfflinePage
+            onPlayOffline={handlePlayOffline}
+            onExploreOnline={() => setActiveNav('home')}
+            onPlayLocalFile={handlePlayLocalPCFile}
+          />
+        )}
 
         {(activeNav === 'movies' || activeNav === 'shows' || activeNav === 'watchlist') && (
           <div className="max-w-7xl mx-auto px-4 md:px-10 pt-28 pb-16">
             <h1 className="text-3xl font-black mb-6 capitalize">
-              {activeNav === 'shows' ? 'TV Shows' : activeNav === 'watchlist' ? 'My List' : 'Movies'}
+              {activeNav === 'shows' ? t('shows') : activeNav === 'watchlist' ? t('watchlist') : t('movies')}
             </h1>
 
             {browseLoading ? (
@@ -150,8 +231,37 @@ function MainApp() {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                      <h4 className="text-sm font-bold text-white line-clamp-1">{item.title}</h4>
-                      {item.year && <span className="text-xs text-neutral-400">{item.year}</span>}
+                      {(() => {
+                        const isHebrew = language === 'he';
+                        const hasHebrew = Boolean(item.titleHe);
+                        const englishTitle = item.title || item.originalTitle || '';
+                        const hasBothTitles = Boolean(hasHebrew && englishTitle && item.titleHe !== englishTitle);
+
+                        const displayTitle = isHebrew
+                          ? (item.titleHe || englishTitle)
+                          : (englishTitle || item.titleHe);
+
+                        const displaySubtitle = hasBothTitles
+                          ? (isHebrew ? englishTitle : item.titleHe)
+                          : null;
+
+                        const titleDir = isHebrew ? (item.titleHe ? 'rtl' : 'ltr') : 'ltr';
+                        const subtitleDir = isHebrew ? 'ltr' : 'rtl';
+
+                        return (
+                          <>
+                            <h4 className="text-sm font-bold text-white line-clamp-1 drop-shadow" dir={titleDir}>
+                              {displayTitle}
+                            </h4>
+                            {displaySubtitle && (
+                              <p className="text-[11px] text-neutral-300 line-clamp-1 drop-shadow-sm font-medium mt-0.5" dir={subtitleDir}>
+                                {displaySubtitle}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
+                      {item.year && <span className="text-xs text-neutral-400 mt-0.5">{item.year}</span>}
                     </div>
                   </div>
                 ))}
@@ -162,7 +272,19 @@ function MainApp() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      <MobileNav
+        activeNav={activeNav}
+        user={user}
+        onNavigate={(nav) => setActiveNav(nav)}
+        onOpenSearch={() => setSearchOpen(true)}
+        onOpenAuth={() => setAuthOpen(true)}
+      />
+
+      {/* Offline Alert & Quick Switch Banner */}
+      <OfflineBanner
+        onNavigateToDownloads={() => setActiveNav('downloads')}
+        onQuickPlay={handlePlayOffline}
+      />
 
       {/* ─── Overlays & Modals ─── */}
       {selectedMediaId && (
@@ -170,9 +292,11 @@ function MainApp() {
           mediaId={selectedMediaId}
           onClose={() => setSelectedMediaId(null)}
           onPlay={(file, title, subtitle, nextEp) => handlePlay(file, title, subtitle, nextEp)}
+          onPlayLocalFile={handlePlayLocalPCFile}
         />
       )}
 
+      {/* Online Video Player */}
       {playerData && (
         <VideoPlayer
           mediaItemId={playerData.mediaItemId}
@@ -180,6 +304,7 @@ function MainApp() {
           title={playerData.title}
           subtitle={playerData.subtitle}
           file={playerData.file}
+          initialTime={playerData.initialTime}
           onClose={() => setPlayerData(null)}
           nextEpisode={playerData.nextEpisode}
           onPlayNext={() => {
@@ -190,6 +315,29 @@ function MainApp() {
                 playerData.nextEpisode.title,
               );
             }
+          }}
+        />
+      )}
+
+      {/* Offline Sandboxed Video Player */}
+      {offlinePlayerData && (
+        <VideoPlayer
+          mediaItemId={offlinePlayerData.mediaItemId}
+          episodeId={offlinePlayerData.episodeId}
+          title={language === 'he' && offlinePlayerData.titleHe ? offlinePlayerData.titleHe : offlinePlayerData.title}
+          offlineItem={offlinePlayerData}
+          onClose={() => setOfflinePlayerData(null)}
+        />
+      )}
+
+      {/* Local PC File Video Player (with user permissions) */}
+      {localFilePlayer && (
+        <VideoPlayer
+          localFileUrl={localFilePlayer.url}
+          title={localFilePlayer.title}
+          onClose={() => {
+            URL.revokeObjectURL(localFilePlayer.url);
+            setLocalFilePlayer(null);
           }}
         />
       )}
@@ -205,13 +353,36 @@ function MainApp() {
         onClose={() => setAuthOpen(false)}
         onSuccess={(newUser) => setUser(newUser)}
       />
+
+      {/* Floating PC Simulator Launch Dock Button */}
+      {!simulatorOpen && (
+        <button
+          onClick={() => setSimulatorOpen(true)}
+          className="fixed bottom-6 right-6 z-40 hidden md:flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#18181b]/90 hover:bg-[#27272a] text-white border border-white/20 shadow-2xl backdrop-blur-xl hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold text-xs"
+          title={language === 'he' ? 'פתח סימולטור נייד (iPhone / iPad)' : 'Open Mobile Simulator (iPhone / iPad)'}
+        >
+          <Smartphone className="w-4 h-4 text-[#E50914]" />
+          <span>{language === 'he' ? 'סימולטור iPhone / iPad' : 'iPhone & iPad Simulator'}</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        </button>
+      )}
     </div>
+  );
+
+  return (
+    <DeviceSimulator isOpen={simulatorOpen} onClose={() => setSimulatorOpen(false)}>
+      {content}
+    </DeviceSimulator>
   );
 }
 
 // Root layout
 const rootRoute = createRootRouteWithContext<RouterContext>()({
-  component: MainApp,
+  component: () => (
+    <ThemeLanguageProvider>
+      <MainApp />
+    </ThemeLanguageProvider>
+  ),
 });
 
 // Home route
@@ -223,3 +394,4 @@ const homeRoute = createRoute({
 
 // Route tree
 export const routeTree = rootRoute.addChildren([homeRoute]);
+

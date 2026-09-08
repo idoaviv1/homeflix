@@ -11,7 +11,7 @@ export interface AuthUser {
 
 export const CurrentUser = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): AuthUser | null => {
-    const request = ctx.switchToHttp().getRequest<FastifyRequest & { user?: AuthUser }>();
-    return request.user || null;
+    const request = ctx.switchToHttp().getRequest<any>();
+    return request.user || request.raw?.user || null;
   },
 );

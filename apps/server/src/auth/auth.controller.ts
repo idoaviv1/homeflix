@@ -38,6 +38,11 @@ export class AuthController {
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
 
+    const deviceId = req.headers['x-device-id'] as string | undefined;
+    if (deviceId) {
+      await this.authService.mergeGuestDeviceData(deviceId, session.user.id).catch(() => {});
+    }
+
     return {
       success: true,
       data: {
@@ -65,6 +70,11 @@ export class AuthController {
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60,
     });
+
+    const deviceId = req.headers['x-device-id'] as string | undefined;
+    if (deviceId) {
+      await this.authService.mergeGuestDeviceData(deviceId, session.user.id).catch(() => {});
+    }
 
     return {
       success: true,

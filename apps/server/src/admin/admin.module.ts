@@ -7,6 +7,7 @@ import { RedisModule } from '../redis/redis.module';
 import { StreamingModule } from '../streaming/streaming.module';
 import { ScannerModule } from '../scanner/scanner.module';
 import { MetadataModule } from '../metadata/metadata.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { MetadataModule } from '../metadata/metadata.module';
     }),
     DatabaseModule,
     RedisModule,
+    AuthModule,
     StreamingModule,
     ScannerModule,
     MetadataModule,

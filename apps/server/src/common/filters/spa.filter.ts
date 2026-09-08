@@ -33,7 +33,10 @@ export class SpaFallbackFilter implements ExceptionFilter {
 
     // Otherwise, serve SPA index.html for client-side routing
     if (fs.existsSync(this.indexPath)) {
-      response.type('text/html').send(fs.readFileSync(this.indexPath, 'utf8'));
+      response
+        .header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        .type('text/html')
+        .send(fs.readFileSync(this.indexPath, 'utf8'));
     } else {
       response.status(404).send({
         statusCode: 404,

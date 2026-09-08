@@ -1,8 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { execSync } from 'node:child_process';
 import * as os from 'node:os';
+import { AdminGuard } from '../common/guards/admin.guard';
 
-@Controller('health')
+@Controller('admin/health')
+@UseGuards(AdminGuard)
 export class AdminHealthController {
   @Get()
   getHealth() {

@@ -13,6 +13,8 @@ export interface User {
 export interface MediaItem {
   id: string;
   type: 'movie' | 'show';
+  tmdbId?: number;
+  imdbId?: string;
   title: string;
   titleHe?: string;
   originalTitle?: string;
@@ -29,6 +31,7 @@ export interface MediaItem {
   genres: string[];
   trailerKey?: string;
   inLibrary: boolean;
+  inWatchlist?: boolean;
   cast?: Array<{ name: string; character: string; profilePath: string | null }>;
   crew?: Array<{ name: string; job: string; profilePath: string | null }>;
   files?: MediaFile[];
@@ -104,12 +107,47 @@ export interface WatchProgress {
   finished: boolean;
 }
 
+export interface WatchHistoryItem {
+  id: string;
+  mediaItemId: string;
+  title: string;
+  titleHe?: string | null;
+  originalTitle?: string | null;
+  type: 'movie' | 'show';
+  posterPath: string | null;
+  backdropPath: string | null;
+  year: number | null;
+  currentTime: number;
+  duration: number;
+  percentage: number;
+  finished: boolean;
+  updatedAt: string;
+  stoppedMinute: number;
+  totalMinutes: number;
+  episode?: {
+    id: string;
+    seasonNumber: number;
+    episodeNumber: number;
+    title: string;
+    stillPath: string | null;
+  } | null;
+}
+
 export interface HomeFeed {
   hero: MediaItem | null;
   continueWatching: any[];
+  inLibrary?: MediaItem[];
   recentlyAddedMovies: MediaItem[];
   recentlyAddedShows: MediaItem[];
-  topRated: MediaItem[];
+  trendingMovies?: MediaItem[];
+  trendingShows?: MediaItem[];
+  topRated?: MediaItem[];
+  actionMovies?: MediaItem[];
+  scifiMovies?: MediaItem[];
+  comedyMovies?: MediaItem[];
+  animationMovies?: MediaItem[];
+  thrillerMovies?: MediaItem[];
+  popularShows?: MediaItem[];
   watchlist: MediaItem[];
 }
 
@@ -118,14 +156,78 @@ export interface SearchResult {
   discover: MediaItem[];
 }
 
+export function getDeviceId(): string {
+  if (typeof window === 'undefined') return '';
+  let id = localStorage.getItem('omflix_device_id');
+  const UUID_REGEX = /^[0-9a-fA-F-]{36}$/;
+  if (!id || !UUID_REGEX.test(id)) {
+    id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          });
+    localStorage.setItem('omflix_device_id', id);
+  }
+  return id;
+}
+
+export function getBaseApiUrl(): string {
+  if (typeof window === 'undefined') return '';
+  const stored = localStorage.getItem('omflix_server_url');
+  if (stored) return stored.replace(/\/+$/, '');
+
+  // Detect Capacitor or native mobile wrapper
+  const isCapacitor =
+    (window as any).Capacitor !== undefined ||
+    window.location.protocol === 'capacitor:' ||
+    (!window.location.origin.includes(':5173') &&
+      !window.location.origin.includes(':8096') &&
+      (window.location.protocol.startsWith('file:') ||
+        (window.location.hostname === 'localhost' && !window.location.port)));
+
+  if (isCapacitor) {
+    // Default to LAN IP of the home server
+    return 'http://192.168.1.213:8096';
+  }
+  return '';
+}
+
+export function apiUrl(endpoint: string): string {
+  if (!endpoint) return '';
+  if (
+    endpoint.startsWith('http://') ||
+    endpoint.startsWith('https://') ||
+    endpoint.startsWith('blob:') ||
+    endpoint.startsWith('data:')
+  ) {
+    return endpoint;
+  }
+  const base = getBaseApiUrl();
+  return `${base}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('omflix_token') : null;
+  const deviceId = getDeviceId();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (deviceId && !headers['X-Device-Id']) {
+    headers['X-Device-Id'] = deviceId;
+  }
+
+  const fullUrl = apiUrl(url);
+  const res = await fetch(fullUrl, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      ...options?.headers,
-    },
+    headers,
     credentials: 'include',
   });
 
@@ -145,14 +247,6 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 function getAdminUrl(endpoint: string): string {
-  if (typeof window !== 'undefined') {
-    const isLocal =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1';
-    if (isLocal) {
-      return `http://127.0.0.1:8097${endpoint}`;
-    }
-  }
   return endpoint;
 }
 
@@ -162,22 +256,33 @@ export const api = {
     return request('/api/v1/auth/me');
   },
   async login(username: string, password: string): Promise<{ user: User; token: string }> {
-    return request('/api/v1/auth/login', {
+    const res = await request<{ user: User; token: string }>('/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
+    if (res?.token && typeof window !== 'undefined') {
+      localStorage.setItem('omflix_token', res.token);
+    }
+    return res;
   },
   async register(
     username: string,
     password: string,
     displayName?: string,
   ): Promise<{ user: User; token: string }> {
-    return request('/api/v1/auth/register', {
+    const res = await request<{ user: User; token: string }>('/api/v1/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, password, displayName }),
     });
+    if (res?.token && typeof window !== 'undefined') {
+      localStorage.setItem('omflix_token', res.token);
+    }
+    return res;
   },
   async logout(): Promise<void> {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('omflix_token');
+    }
     return request('/api/v1/auth/logout', { method: 'POST' });
   },
 
@@ -187,6 +292,17 @@ export const api = {
   },
   async getMedia(id: string): Promise<MediaItem> {
     return request(`/api/v1/media/${id}`);
+  },
+  async getTrailer(
+    id: string,
+    params?: { title?: string; year?: number; tmdbId?: number },
+  ): Promise<{ trailerKey: string | null }> {
+    const qs = new URLSearchParams();
+    if (params?.title) qs.set('title', params.title);
+    if (params?.year) qs.set('year', String(params.year));
+    if (params?.tmdbId) qs.set('tmdbId', String(params.tmdbId));
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    return request(`/api/v1/media/${id}/trailer${query}`);
   },
   async listMedia(params?: Record<string, string>): Promise<{ items: MediaItem[]; count: number }> {
     const query = new URLSearchParams(params).toString();
@@ -208,6 +324,9 @@ export const api = {
       body: JSON.stringify(data),
     });
   },
+  async getWatchHistory(): Promise<WatchHistoryItem[]> {
+    return request('/api/v1/media/history');
+  },
   async toggleWatchlist(mediaItemId: string): Promise<{ inWatchlist: boolean }> {
     return request('/api/v1/media/watchlist', {
       method: 'POST',
@@ -227,6 +346,54 @@ export const api = {
   },
   async getScannerStatus(): Promise<any> {
     return request('/api/v1/scanner/status');
+  },
+
+  // Downloads
+  async searchDownloads(params: {
+    title: string;
+    tmdbId?: number;
+    imdbId?: string;
+    year?: number;
+  }): Promise<DownloadRelease[]> {
+    const q = new URLSearchParams();
+    q.set('title', params.title);
+    if (params.tmdbId) q.set('tmdbId', params.tmdbId.toString());
+    if (params.imdbId) q.set('imdbId', params.imdbId);
+    if (params.year) q.set('year', params.year.toString());
+    const res = await request<any>(`/api/v1/downloads/search?${q.toString()}`);
+    return Array.isArray(res) ? res : (res?.data || []);
+  },
+  async startDownload(data: {
+    tmdbId?: number;
+    imdbId?: string;
+    title: string;
+    year?: number;
+    quality?: string;
+    magnetUrl: string;
+    infoHash?: string;
+  }): Promise<DownloadJob> {
+    const res = await request<any>('/api/v1/downloads', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res?.data !== undefined ? res.data : res;
+  },
+  async getDownloads(): Promise<DownloadJob[]> {
+    const res = await request<any>('/api/v1/downloads');
+    return Array.isArray(res) ? res : (res?.data || []);
+  },
+  async cancelDownload(id: string): Promise<void> {
+    return request(`/api/v1/downloads/${id}`, { method: 'DELETE' });
+  },
+  async getDownloadSettings(): Promise<{ hasRealDebrid: boolean; maskedKey: string | null }> {
+    const res = await request<any>('/api/v1/downloads/settings');
+    return res?.data !== undefined ? res.data : (res || { hasRealDebrid: false, maskedKey: null });
+  },
+  async updateDownloadSettings(data: { realDebridApiKey?: string }): Promise<void> {
+    return request('/api/v1/downloads/settings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
   // Admin (localhost only)
@@ -263,3 +430,34 @@ export const api = {
     });
   },
 };
+
+export interface DownloadRelease {
+  id: string;
+  title: string;
+  quality: string;
+  size: string;
+  seeds: number;
+  source: string;
+  magnetUrl: string;
+  infoHash: string;
+}
+
+export interface DownloadJob {
+  id: string;
+  tmdbId?: number;
+  imdbId?: string;
+  title: string;
+  year?: number;
+  quality?: string;
+  status: 'queued' | 'downloading' | 'completed' | 'failed' | 'cancelled';
+  progress: number;
+  downloadSpeed: string;
+  downloadedSize: string;
+  totalSize: string;
+  eta: string;
+  peers: number;
+  errorMessage?: string;
+  destinationPath: string;
+  createdAt: string;
+  completedAt?: string;
+}

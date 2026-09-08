@@ -16,14 +16,17 @@ import {
   Tv,
 } from 'lucide-react';
 import Hls from 'hls.js';
-import { api, type MediaFile } from '../lib/api';
+import { api, apiUrl, type MediaFile } from '../lib/api';
+import { offlineStorage, type OfflineMediaItem } from '../lib/offlineStorage';
 
 export interface VideoPlayerProps {
-  mediaItemId: string;
+  mediaItemId?: string;
   episodeId?: string;
   title: string;
   subtitle?: string; // e.g. "S1:E1 Pilot"
-  file: MediaFile;
+  file?: MediaFile;
+  offlineItem?: OfflineMediaItem;
+  localFileUrl?: string;
   initialTime?: number;
   onClose: () => void;
   nextEpisode?: {
@@ -40,6 +43,8 @@ export function VideoPlayer({
   title,
   subtitle,
   file,
+  offlineItem,
+  localFileUrl,
   initialTime = 0,
   onClose,
   nextEpisode,
@@ -76,18 +81,61 @@ export function VideoPlayer({
   // Mobile double-tap seek indicators
   const [doubleTapFeedback, setDoubleTapFeedback] = useState<'left' | 'right' | null>(null);
 
+  // Offline media playback state
+  const [offlineVideoSrc, setOfflineVideoSrc] = useState<string | null>(null);
+  const [offlineSubtitleTracks, setOfflineSubtitleTracks] = useState<
+    Array<{ streamIndex: number; language: string; title: string; src: string }>
+  >([]);
+
+  useEffect(() => {
+    if (!offlineItem) return;
+    let isMounted = true;
+    (async () => {
+      try {
+        const src = await offlineStorage.getVideoPlaybackSrc(offlineItem);
+        if (!isMounted) return;
+        setOfflineVideoSrc(src);
+
+        const loadedSubs = await Promise.all(
+          (offlineItem.subtitles || []).map(async (sub) => {
+            const subSrc = await offlineStorage.getSubtitleSrc(sub);
+            return {
+              streamIndex: sub.streamIndex,
+              language: sub.language,
+              title: sub.title,
+              src: subSrc,
+            };
+          })
+        );
+        if (!isMounted) return;
+        setOfflineSubtitleTracks(loadedSubs);
+        const defaultSub =
+          loadedSubs.find((s) => s.language === 'heb' || s.language === 'he') || loadedSubs[0];
+        if (defaultSub) {
+          setActiveSubtitle(defaultSub.streamIndex);
+        }
+      } catch (err) {
+        console.error('Failed to load offline media:', err);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [offlineItem]);
+
   // ─── Stream URL Builder ───
   const getStreamUrl = useCallback(
     (type: string) => {
+      if (!file) return '';
       if (type === 'direct') {
-        return `/api/v1/stream/${file.id}/direct`;
+        return apiUrl(`/api/v1/stream/${file.id}/direct`);
       }
-      return `/api/v1/stream/${file.id}/hls/variant/${type}/index.m3u8`;
+      return apiUrl(`/api/v1/stream/${file.id}/hls/variant/${type}/index.m3u8`);
     },
-    [file.id],
+    [file?.id],
   );
 
-  // ─── Initialize Video Source (Direct Play or HLS) ───
+  // ─── Initialize Video Source (Offline / Direct Play / HLS) ───
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -96,6 +144,24 @@ export function VideoPlayer({
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
+
+    if (localFileUrl) {
+      video.src = localFileUrl;
+      video.currentTime = initialTime;
+      video.play().catch(() => {});
+      return;
+    }
+
+    if (offlineItem) {
+      if (offlineVideoSrc) {
+        video.src = offlineVideoSrc;
+        video.currentTime = initialTime;
+        video.play().catch(() => {});
+      }
+      return;
+    }
+
+    if (!file) return;
 
     const streamUrl = getStreamUrl(streamType);
 
@@ -129,10 +195,11 @@ export function VideoPlayer({
         hlsRef.current = null;
       }
     };
-  }, [streamType, file.id, getStreamUrl, initialTime]);
+  }, [offlineItem, offlineVideoSrc, localFileUrl, streamType, file?.id, getStreamUrl, initialTime]);
 
   // ─── Watch Progress Heartbeat (every 5 seconds) ───
   useEffect(() => {
+    if (!mediaItemId) return;
     heartbeatIntervalRef.current = setInterval(() => {
       const video = videoRef.current;
       if (video && !video.paused && video.duration > 0) {
@@ -147,6 +214,15 @@ export function VideoPlayer({
 
     return () => {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      const video = videoRef.current;
+      if (video && video.duration > 0) {
+        api.updateProgress({
+          mediaItemId,
+          episodeId,
+          currentTime: video.currentTime,
+          duration: video.duration,
+        }).catch(() => {});
+      }
     };
   }, [mediaItemId, episodeId]);
 
@@ -215,7 +291,7 @@ export function VideoPlayer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, [isFullscreen, onClose, resetControlsTimeout]);
 
   // ─── Playback Actions ───
   const togglePlay = () => {
@@ -353,9 +429,21 @@ export function VideoPlayer({
         {activeSubtitle !== null && (
           <track
             kind="subtitles"
-            src={`/api/v1/stream/${file.id}/subtitles/${activeSubtitle}.vtt`}
-            srcLang={file.subtitleStreams?.[activeSubtitle]?.language || 'en'}
-            label={file.subtitleStreams?.[activeSubtitle]?.title || 'Subtitles'}
+            src={
+              offlineItem
+                ? offlineSubtitleTracks.find((s) => s.streamIndex === activeSubtitle)?.src || ''
+                : apiUrl(`/api/v1/stream/${file?.id}/subtitles/${activeSubtitle}.vtt`)
+            }
+            srcLang={
+              offlineItem
+                ? offlineSubtitleTracks.find((s) => s.streamIndex === activeSubtitle)?.language || 'en'
+                : file?.subtitleStreams?.[activeSubtitle]?.language || 'en'
+            }
+            label={
+              offlineItem
+                ? offlineSubtitleTracks.find((s) => s.streamIndex === activeSubtitle)?.title || 'Subtitles'
+                : file?.subtitleStreams?.[activeSubtitle]?.title || 'Subtitles'
+            }
             default
           />
         )}
@@ -384,7 +472,7 @@ export function VideoPlayer({
         <div className="flex items-center gap-4">
           <button
             onClick={onClose}
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
             title="Back to Homeflix"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -397,7 +485,12 @@ export function VideoPlayer({
 
         {/* Badges */}
         <div className="flex items-center gap-2">
-          {streamType === 'direct' ? (
+          {offlineItem ? (
+            <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1.5">
+              <span>נגן אופליין</span>
+              <span>✈️</span>
+            </span>
+          ) : streamType === 'direct' ? (
             <span className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
               Direct Play
             </span>
@@ -564,27 +657,49 @@ export function VideoPlayer({
                       {activeSubtitle === null && <Check className="w-4 h-4 text-emerald-400" />}
                     </button>
 
-                    {(file.subtitleStreams || []).map((sub) => (
-                      <button
-                        key={sub.index}
-                        onClick={() => {
-                          setActiveSubtitle(sub.index);
-                          setShowSubtitlesMenu(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${
-                          activeSubtitle === sub.index
-                            ? 'bg-white/20 text-white font-bold'
-                            : 'text-neutral-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <span className="truncate">
-                          {sub.language?.toUpperCase() || 'Track'} - {sub.title || sub.codec}
-                        </span>
-                        {activeSubtitle === sub.index && (
-                          <Check className="w-4 h-4 text-emerald-400" />
-                        )}
-                      </button>
-                    ))}
+                    {offlineItem
+                      ? offlineSubtitleTracks.map((sub) => (
+                          <button
+                            key={sub.streamIndex}
+                            onClick={() => {
+                              setActiveSubtitle(sub.streamIndex);
+                              setShowSubtitlesMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between cursor-pointer ${
+                              activeSubtitle === sub.streamIndex
+                                ? 'bg-white/20 text-white font-bold'
+                                : 'text-neutral-300 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className="truncate">
+                              {sub.language.toUpperCase()} - {sub.title}
+                            </span>
+                            {activeSubtitle === sub.streamIndex && (
+                              <Check className="w-4 h-4 text-emerald-400" />
+                            )}
+                          </button>
+                        ))
+                      : ((file?.subtitleStreams || [])).map((sub) => (
+                          <button
+                            key={sub.index}
+                            onClick={() => {
+                              setActiveSubtitle(sub.index);
+                              setShowSubtitlesMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between cursor-pointer ${
+                              activeSubtitle === sub.index
+                                ? 'bg-white/20 text-white font-bold'
+                                : 'text-neutral-300 hover:bg-white/10'
+                            }`}
+                          >
+                            <span className="truncate">
+                              {sub.language?.toUpperCase() || 'Track'} - {sub.title || sub.codec}
+                            </span>
+                            {activeSubtitle === sub.index && (
+                              <Check className="w-4 h-4 text-emerald-400" />
+                            )}
+                          </button>
+                        ))}
                   </div>
 
                   {/* Subtitle Size */}

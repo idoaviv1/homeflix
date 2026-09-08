@@ -14,6 +14,7 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AdminModule } from './admin/admin.module';
+import { AuthService } from './auth/auth.service';
 import { SpaFallbackFilter } from './common/filters/spa.filter';
 
 const logger = new Logger('Bootstrap');
@@ -38,6 +39,24 @@ async function bootstrap() {
     secret: process.env['SESSION_SECRET'] || 'omflix-cookie-secret-key-development',
   });
 
+  const authService = publicApp.get(AuthService);
+  const fastifyInstance = publicApp.getHttpAdapter().getInstance();
+  fastifyInstance.addHook('preHandler', async (req: any) => {
+    let token: string | undefined;
+    if (req.cookies && req.cookies['omflix_session']) {
+      token = req.cookies['omflix_session'];
+    }
+    const authHeader = req.headers['authorization'];
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    if (token) {
+      req.user = await authService.validateSession(token);
+    } else {
+      req.user = null;
+    }
+  });
+
   publicApp.enableCors({
     origin: true, // Allow same-network origins
     credentials: true,
@@ -53,6 +72,11 @@ async function bootstrap() {
       prefix: '/',
       wildcard: true,
       index: ['index.html'],
+      setHeaders: (res: any, filePath: string) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('sw.js')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      },
     });
     publicApp.useGlobalFilters(new SpaFallbackFilter(webDistPath));
     logger.log(`📱 Serving Web UI from ${webDistPath}`);
@@ -78,19 +102,41 @@ async function bootstrap() {
     }),
   );
 
+  await adminApp.register(require('@fastify/cookie') as any, {
+    secret: process.env['SESSION_SECRET'] || 'omflix-cookie-secret-key-development',
+  });
+
+  const adminAuthService = adminApp.get(AuthService);
+  const adminFastify = adminApp.getHttpAdapter().getInstance();
+  adminFastify.addHook('preHandler', async (req: any) => {
+    let token: string | undefined;
+    if (req.cookies && req.cookies['omflix_session']) {
+      token = req.cookies['omflix_session'];
+    }
+    const authHeader = req.headers['authorization'];
+    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    if (token) {
+      req.user = await adminAuthService.validateSession(token);
+    } else {
+      req.user = null;
+    }
+  });
+
   adminApp.enableCors({
     origin: true,
     credentials: true,
   });
 
-  adminApp.setGlobalPrefix('api/v1/admin');
+  adminApp.setGlobalPrefix('api/v1');
 
   // CRITICAL: Admin binds ONLY to 127.0.0.1
   const adminHost = '127.0.0.1';
   const adminPort = parseInt(process.env['ADMIN_PORT'] || '8097', 10);
 
   await adminApp.listen(adminPort, adminHost);
-  logger.log(`🔒 Homeflix Admin API running on http://${adminHost}:${adminPort} (localhost only)`);
+  logger.log(`🔒 Homeflix Admin API running on http://${adminHost}:${adminPort} (localhost only, guarded)`);
 }
 
 bootstrap().catch((err) => {

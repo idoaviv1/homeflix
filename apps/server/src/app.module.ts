@@ -8,6 +8,8 @@ import { MetadataModule } from './metadata/metadata.module';
 import { ScannerModule } from './scanner/scanner.module';
 import { MediaModule } from './media/media.module';
 import { StreamingModule } from './streaming/streaming.module';
+import { DownloadsModule } from './downloads/downloads.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { StreamingModule } from './streaming/streaming.module';
     ScannerModule,
     MediaModule,
     StreamingModule,
+    DownloadsModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

@@ -1,8 +1,6 @@
 // Homeflix Service Worker
-const CACHE_NAME = 'homeflix-v2';
+const CACHE_NAME = 'homeflix-v5';
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/homeflix-logo.svg',
   '/homeflix-icon-512.svg',

@@ -186,10 +186,24 @@ export class StreamingService implements OnModuleInit {
 
     if (rangeHeader) {
       const parts = rangeHeader.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0] || '0', 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = end - start + 1;
+      let start = parseInt(parts[0] || '0', 10);
+      let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
+      if (isNaN(start) || start < 0) start = 0;
+      if (isNaN(end) || end >= fileSize) end = fileSize - 1;
+
+      if (start >= fileSize || start > end) {
+        return {
+          stream: Buffer.alloc(0),
+          status: 416,
+          headers: {
+            'Content-Range': `bytes */${fileSize}`,
+            'Accept-Ranges': 'bytes',
+          },
+        };
+      }
+
+      const chunkSize = end - start + 1;
       const stream = fs.createReadStream(filePath, { start, end });
 
       return {
