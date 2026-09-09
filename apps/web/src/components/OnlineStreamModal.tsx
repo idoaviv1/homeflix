@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Loader2,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
@@ -154,6 +156,7 @@ export function OnlineStreamModal({
   const [currentEpisode, setCurrentEpisode] = useState(episode);
   const [showServerMenu, setShowServerMenu] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [adShieldEnabled, setAdShieldEnabled] = useState(true);
 
   // Active IDs with auto-resolution
   const [activeTmdbId, setActiveTmdbId] = useState<number | undefined>(tmdbId);
@@ -458,8 +461,33 @@ export function OnlineStreamModal({
           </div>
         </div>
 
-        {/* Right Controls */}
+        {/* Right Controls: Ad-Shield & Close */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAdShieldEnabled(!adShieldEnabled)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+              adShieldEnabled
+                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:bg-neutral-700'
+            }`}
+            title={
+              adShieldEnabled
+                ? (isRtl ? 'מגן פופ-אפים שקט מופעל (ללא זיהוי)' : 'Silent Ad-Shield Active (undetected)')
+                : (isRtl ? 'מגן פופ-אפים כבוי' : 'Ad-Shield Disabled')
+            }
+          >
+            {adShieldEnabled ? (
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <ShieldAlert className="w-3.5 h-3.5 text-neutral-400" />
+            )}
+            <span className="hidden sm:inline">
+              {adShieldEnabled
+                ? (isRtl ? 'מגן פופ-אפים פעיל' : 'Ad-Shield Active')
+                : (isRtl ? 'ללא מגן' : 'Shield Off')}
+            </span>
+          </button>
+
           <button
             onClick={onClose}
             className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-neutral-300 hover:text-white transition-colors border border-white/10 cursor-pointer"
@@ -584,13 +612,18 @@ export function OnlineStreamModal({
           </div>
         )}
 
-        {/* Video Embed Iframe */}
+        {/* Video Embed Iframe with Silent Ad-Shield Sandbox */}
         <iframe
-          key={`${selectedServerId}-${currentSeason}-${currentEpisode}-${activeTmdbId || tmdbId || ''}-${reloadKey}`}
+          key={`${selectedServerId}-${currentSeason}-${currentEpisode}-${activeTmdbId || tmdbId || ''}-${reloadKey}-${adShieldEnabled ? 'shielded' : 'open'}`}
           src={streamUrl}
           title={title}
           onLoad={handleIframeLoad}
           className="w-full h-full border-0"
+          sandbox={
+            adShieldEnabled
+              ? 'allow-scripts allow-same-origin allow-forms allow-presentation'
+              : undefined
+          }
           allow="autoplay; fullscreen; encrypted-media; picture-in-picture; payment"
           allowFullScreen
           referrerPolicy="origin"
