@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User as UserIcon, Shield, LogIn, LogOut, Download, Sun, Moon, Globe, Clock, Server } from 'lucide-react';
+import { Search, User as UserIcon, Shield, LogIn, LogOut, Download, Sun, Moon, Globe, Clock, Server, Menu } from 'lucide-react';
 import { api, type User } from '../lib/api';
 import { DownloadsDrawer } from './DownloadsDrawer';
 import { ServerConfigModal } from './ServerConfigModal';
+import { MobileSideMenu } from './MobileSideMenu';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 
 export interface NavbarProps {
@@ -26,6 +27,7 @@ export function Navbar({
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showDownloads, setShowDownloads] = useState(false);
   const [showServerModal, setShowServerModal] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [activeDownloadsCount, setActiveDownloadsCount] = useState(0);
 
   useEffect(() => {
@@ -47,15 +49,15 @@ export function Navbar({
   return (
     <header className="fixed top-0 left-0 right-0 z-40 safe-top">
       <div className="glass-heavy border-b border-white/5">
-        <nav className="mx-auto flex h-16 max-w-[1920px] items-center justify-between px-4 md:px-8">
-          {/* Logo */}
-          <div className="flex items-center gap-8">
+        <nav className="mx-auto flex h-14 md:h-16 max-w-[1920px] items-center justify-between px-3 md:px-8">
+          {/* Logo & Desktop navigation */}
+          <div className="flex items-center gap-8 shrink-0">
             <button
               onClick={() => onNavigate('home')}
               className="flex items-center gap-2 shrink-0 cursor-pointer"
               aria-label="Homeflix Home"
             >
-              <img src="/homeflix-logo.svg" alt="Homeflix" className="h-8 w-auto" />
+              <img src="/homeflix-logo.svg" alt="Homeflix" className="h-7 md:h-8 w-auto object-contain" />
             </button>
 
             {/* Center navigation — hidden on mobile */}
@@ -112,8 +114,30 @@ export function Navbar({
             </div>
           </div>
 
-          {/* Right actions */}
-          <div className="flex items-center gap-3">
+          {/* Mobile Right Actions: Quick Server Icon + Hamburger Menu (clean, spacious, no overlap) */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={() => setShowServerModal(true)}
+              className="p-2 rounded-xl text-neutral-300 hover:text-white bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all cursor-pointer relative"
+              title={language === 'he' ? 'הגדרות שרת' : 'Server Settings'}
+              aria-label="Server Settings"
+            >
+              <Server className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            </button>
+
+            <button
+              onClick={() => setShowMobileMenu(true)}
+              className="p-2 rounded-xl text-white bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
+              title={language === 'he' ? 'תפריט' : 'Menu'}
+              aria-label="Open Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Desktop Right actions (hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-3">
             {/* Language Switcher (Hebrew / English) */}
             <button
               onClick={toggleLanguage}
@@ -166,7 +190,7 @@ export function Navbar({
             >
               <Download className="h-5 w-5" />
               {activeDownloadsCount > 0 && (
-                <span className="absolute 0 top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#E50914] text-[10px] font-extrabold text-white animate-pulse">
+                <span className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#E50914] text-[10px] font-extrabold text-white animate-pulse">
                   {activeDownloadsCount}
                 </span>
               )}
@@ -278,6 +302,20 @@ export function Navbar({
         </nav>
       </div>
 
+      {/* Mobile Slide-over Side Drawer Menu */}
+      <MobileSideMenu
+        isOpen={showMobileMenu}
+        onClose={() => setShowMobileMenu(false)}
+        user={user}
+        activeNav={activeNav}
+        onNavigate={onNavigate}
+        onOpenAuth={onOpenAuth}
+        onOpenDownloads={() => setShowDownloads(true)}
+        onOpenServerModal={() => setShowServerModal(true)}
+        onLogout={onLogout}
+        activeDownloadsCount={activeDownloadsCount}
+      />
+
       {/* Downloads Slide-over Drawer */}
       <DownloadsDrawer isOpen={showDownloads} onClose={() => setShowDownloads(false)} />
 
@@ -286,3 +324,4 @@ export function Navbar({
     </header>
   );
 }
+
