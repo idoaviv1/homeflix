@@ -302,8 +302,8 @@ export function MediaModal({ mediaId, onClose, onPlay, onPlayLocalFile }: MediaM
                     {t('watchOnline')}
                   </button>
 
-                  {/* In-App Offline Sandbox Download Button - ONLY in native mobile app */}
-                  {isNative && primaryFile && (
+                  {/* In-App Offline Download Button */}
+                  {primaryFile && (
                     <button
                       onClick={() => {
                         setSandboxDownloadTarget({
@@ -312,11 +312,11 @@ export function MediaModal({ mediaId, onClose, onPlay, onPlayLocalFile }: MediaM
                         });
                         setShowSandboxDownloadModal(true);
                       }}
-                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-sm backdrop-blur-sm transition-all border border-emerald-500/30 cursor-pointer btn-interactive active:scale-95"
-                      title={language === 'he' ? 'הורדה פנימית לאפליקציה (לצפייה אופליין)' : 'Download to app for offline viewing'}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 font-semibold text-sm backdrop-blur-sm transition-all border border-emerald-500/40 cursor-pointer btn-interactive active:scale-95 shadow-lg shadow-emerald-950/30"
+                      title={language === 'he' ? 'הורד לצפייה אופליין ללא אינטרנט וללא פרסומות' : 'Download for ad-free offline viewing'}
                     >
-                      <Smartphone className="w-4 h-4" />
-                      <span>{language === 'he' ? 'הורד למכשיר' : 'Download to Device'}</span>
+                      <Smartphone className="w-4 h-4 text-emerald-400" />
+                      <span>{language === 'he' ? (isNative ? 'הורד לטלפון (אופליין)' : 'הורד לטלפון / אופליין') : (isNative ? 'Download to Phone' : 'Download Offline')}</span>
                     </button>
                   )}
 
@@ -633,6 +633,18 @@ export function MediaModal({ mediaId, onClose, onPlay, onPlayLocalFile }: MediaM
           imdbId={media.imdbId}
           year={media.year}
           primaryFileId={primaryFile?.id}
+          onDownloadToDevice={
+            primaryFile
+              ? () => {
+                  setShowDownloadModal(false);
+                  setSandboxDownloadTarget({
+                    file: primaryFile,
+                    title: language === 'he' && media.titleHe ? media.titleHe : media.title,
+                  });
+                  setShowSandboxDownloadModal(true);
+                }
+              : undefined
+          }
           onOpenOnlineStream={() => setShowOnlineStream(true)}
           onPlayLocalFile={onPlayLocalFile}
           onClose={() => setShowDownloadModal(false)}

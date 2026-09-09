@@ -24,6 +24,7 @@ export interface DownloadModalProps {
   imdbId?: string;
   year?: number;
   primaryFileId?: string;
+  onDownloadToDevice?: () => void;
   onOpenOnlineStream?: () => void;
   onPlayLocalFile?: (file: File) => void;
   onClose: () => void;
@@ -36,6 +37,7 @@ export function DownloadModal({
   imdbId,
   year,
   primaryFileId,
+  onDownloadToDevice,
   onOpenOnlineStream,
   onPlayLocalFile,
   onClose,
@@ -209,6 +211,33 @@ export function DownloadModal({
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {/* ─── DIRECT DEVICE DOWNLOAD BANNER (IF FILE EXISTS IN LIBRARY) ─── */}
+          {onDownloadToDevice && (
+            <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-emerald-950/20 animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-sm font-bold text-white block">
+                    {language === 'he' ? 'הסרט זמין להורדה ישירה לטלפון!' : 'Movie ready for direct download to phone!'}
+                  </span>
+                  <span className="text-xs text-emerald-200/80 block mt-0.5">
+                    {language === 'he'
+                      ? 'הסרט שמור בספרייה הביתית — הורד עכשיו לצפייה אופליין ללא פרסומות וללא אינטרנט'
+                      : 'Stored on home library — download now for ad-free offline viewing'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={onDownloadToDevice}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer shrink-0"
+              >
+                {language === 'he' ? 'הורד לטלפון עכשיו' : 'Download to Phone Now'}
+              </button>
             </div>
           )}
 

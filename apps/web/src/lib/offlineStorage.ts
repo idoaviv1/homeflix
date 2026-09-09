@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { apiUrl } from './api';
 
@@ -386,94 +386,147 @@ class OfflineStorageManager {
 
     // 3. Download the video stream directly into internal sandbox
     const streamUrl = apiUrl(`/api/v1/stream/${params.fileId}/direct`);
-    const response = await fetch(streamUrl, { signal });
-
-    if (!response.ok) {
-      throw new Error(`Server returned HTTP ${response.status}`);
-    }
-
-    const contentLength = response.headers.get('content-length');
-    const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-    const reader = response.body?.getReader();
-
-    if (!reader) {
-      throw new Error('Readable stream not supported');
-    }
-
-    let receivedBytes = 0;
-    const chunks: Uint8Array[] = [];
-    let lastTime = Date.now();
-    let lastBytes = 0;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      chunks.push(value);
-      receivedBytes += value.length;
-
-      const now = Date.now();
-      const timeDiff = (now - lastTime) / 1000;
-
-      if (timeDiff >= 0.5) {
-        const bytesDiff = receivedBytes - lastBytes;
-        const speedMbps = ((bytesDiff * 8) / (timeDiff * 1024 * 1024));
-        const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : 50;
-        const remainingBytes = totalBytes - receivedBytes;
-        const bytesPerSec = bytesDiff / timeDiff;
-        const etaSeconds = bytesPerSec > 0 ? Math.round(remainingBytes / bytesPerSec) : 0;
-
-        if (this.activeDownloads[downloadId]) {
-          this.activeDownloads[downloadId].bytesDownloaded = receivedBytes;
-          this.activeDownloads[downloadId].totalBytes = totalBytes || receivedBytes;
-          this.activeDownloads[downloadId].percent = percent;
-          this.activeDownloads[downloadId].speedMbps = parseFloat(speedMbps.toFixed(1));
-          this.activeDownloads[downloadId].etaSeconds = etaSeconds;
-          this.notifyProgress();
-        }
-
-        lastTime = now;
-        lastBytes = receivedBytes;
-      }
-    }
-
-    if (this.activeDownloads[downloadId]) {
-      this.activeDownloads[downloadId].status = 'saving';
-      this.activeDownloads[downloadId].percent = 99;
-      this.notifyProgress();
-    }
-
-    // Merge chunks into a Blob
-    const videoBlob = new Blob(chunks as any, { type: 'video/mp4' });
-
     let videoLocalPath: string | undefined;
     let videoBlobKey: string | undefined;
+    let receivedBytes = 0;
 
     if (this.isNative) {
-      // In Capacitor native iOS, save to sandbox Directory.Data
+      // ─── NATIVE MOBILE (Galaxy Android & iPhone iOS) ───
+      // Direct native streaming to internal storage Directory.Data
       const filename = `HomeflixMedia/${downloadId}_${params.filename || 'video.mp4'}`;
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const res = (reader.result as string) || '';
-          const parts = res.split(',');
-          const base64: string = parts[1] ?? '';
-          resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(videoBlob);
-      });
+      let progressHandle: PluginListenerHandle | null = null;
+      let lastTime = Date.now();
+      let lastBytes = 0;
 
-      await Filesystem.writeFile({
-        path: filename,
-        data: base64Data,
-        directory: Directory.Data,
-        recursive: true,
-      });
+      try {
+        progressHandle = await Filesystem.addListener('progress', (p: { bytes: number; contentLength: number }) => {
+          const now = Date.now();
+          const timeDiff = (now - lastTime) / 1000;
+          if (timeDiff >= 0.4 && this.activeDownloads[downloadId]) {
+            const bytesDiff = p.bytes - lastBytes;
+            const speedMbps = (bytesDiff * 8) / (timeDiff * 1024 * 1024);
+            const total = p.contentLength || params.duration ? p.contentLength : 0;
+            const percent = total > 0 ? Math.min(99, Math.round((p.bytes / total) * 100)) : 50;
+            const remainingBytes = Math.max(0, total - p.bytes);
+            const bytesPerSec = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+            const etaSeconds = bytesPerSec > 0 ? Math.round(remainingBytes / bytesPerSec) : 0;
 
-      videoLocalPath = filename;
+            this.activeDownloads[downloadId].bytesDownloaded = p.bytes;
+            this.activeDownloads[downloadId].totalBytes = total || p.bytes;
+            this.activeDownloads[downloadId].percent = percent;
+            this.activeDownloads[downloadId].speedMbps = parseFloat(speedMbps.toFixed(1));
+            this.activeDownloads[downloadId].etaSeconds = etaSeconds;
+            this.notifyProgress();
+
+            lastTime = now;
+            lastBytes = p.bytes;
+          }
+        });
+
+        await Filesystem.downloadFile({
+          url: streamUrl,
+          path: filename,
+          directory: Directory.Data,
+          progress: true,
+          recursive: true,
+        });
+
+        videoLocalPath = filename;
+        try {
+          const statRes = await Filesystem.stat({
+            path: filename,
+            directory: Directory.Data,
+          });
+          receivedBytes = statRes.size;
+        } catch {
+          receivedBytes = this.activeDownloads[downloadId]?.bytesDownloaded || 0;
+        }
+      } catch (nativeErr) {
+        console.warn('Native downloadFile error, falling back to fetch stream:', nativeErr);
+        const response = await fetch(streamUrl, { signal });
+        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('Readable stream not supported');
+
+        const chunks: Uint8Array[] = [];
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          receivedBytes += value.length;
+        }
+        const videoBlob = new Blob(chunks as any, { type: 'video/mp4' });
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const res = (reader.result as string) || '';
+            resolve(res.split(',')[1] ?? '');
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(videoBlob);
+        });
+
+        await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: Directory.Data,
+          recursive: true,
+        });
+        videoLocalPath = filename;
+      } finally {
+        if (progressHandle) {
+          await progressHandle.remove();
+        }
+      }
     } else {
-      // Web / PC Simulator: Save in IndexedDB
+      // ─── WEB BROWSER / PC SIMULATOR ───
+      // Stream chunks into IndexedDB
+      const response = await fetch(streamUrl, { signal });
+      if (!response.ok) {
+        throw new Error(`Server returned HTTP ${response.status}`);
+      }
+
+      const contentLength = response.headers.get('content-length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('Readable stream not supported');
+
+      const chunks: Uint8Array[] = [];
+      let lastTime = Date.now();
+      let lastBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        chunks.push(value);
+        receivedBytes += value.length;
+
+        const now = Date.now();
+        const timeDiff = (now - lastTime) / 1000;
+        if (timeDiff >= 0.5) {
+          const bytesDiff = receivedBytes - lastBytes;
+          const speedMbps = (bytesDiff * 8) / (timeDiff * 1024 * 1024);
+          const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : 50;
+          const remainingBytes = totalBytes - receivedBytes;
+          const bytesPerSec = bytesDiff / timeDiff;
+          const etaSeconds = bytesPerSec > 0 ? Math.round(remainingBytes / bytesPerSec) : 0;
+
+          if (this.activeDownloads[downloadId]) {
+            this.activeDownloads[downloadId].bytesDownloaded = receivedBytes;
+            this.activeDownloads[downloadId].totalBytes = totalBytes || receivedBytes;
+            this.activeDownloads[downloadId].percent = percent;
+            this.activeDownloads[downloadId].speedMbps = parseFloat(speedMbps.toFixed(1));
+            this.activeDownloads[downloadId].etaSeconds = etaSeconds;
+            this.notifyProgress();
+          }
+
+          lastTime = now;
+          lastBytes = receivedBytes;
+        }
+      }
+
+      const videoBlob = new Blob(chunks as any, { type: 'video/mp4' });
       videoBlobKey = `video_${downloadId}`;
       await idbPut(STORE_BLOBS, videoBlobKey, videoBlob);
     }
