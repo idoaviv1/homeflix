@@ -202,9 +202,36 @@ function MediaCard({
           </div>
         )}
 
-        {/* Hover Overlay with details & play */}
+        {/* Always-visible Title Bar on the Card (Bottom Overlay) */}
         <div
-          className={`absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col justify-end p-3 transition-opacity duration-300 ${
+          className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/95 via-black/70 to-transparent pt-7 ${
+            isContinueWatching ? 'pb-3' : 'pb-2'
+          } px-2 pointer-events-none transition-opacity duration-200 ${
+            isHovered ? 'md:opacity-0' : 'opacity-100'
+          }`}
+        >
+          <p
+            className="text-[11px] md:text-xs font-bold text-white leading-tight drop-shadow truncate w-full"
+            dir={titleDir}
+            title={displayTitle}
+          >
+            {displayTitle}
+          </p>
+          {(item.year || item.rating) && (
+            <div className="flex items-center justify-between mt-0.5 text-[9px] text-neutral-300 font-medium">
+              {item.year && <span>{item.year}</span>}
+              {item.rating && (
+                <span className="text-emerald-400 font-bold ml-auto">
+                  {(item.rating * 10).toFixed(0)}%
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Hover Overlay with details & play (desktop) */}
+        <div
+          className={`hidden md:flex absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent flex-col justify-end p-3 transition-opacity duration-300 z-20 ${
             isHovered ? 'opacity-100' : 'opacity-0'
           }`}
         >

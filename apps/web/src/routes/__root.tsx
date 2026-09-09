@@ -230,7 +230,7 @@ function MainApp() {
                       alt={item.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-2.5 pt-6 pointer-events-none">
                       {(() => {
                         const isHebrew = language === 'he';
                         const hasHebrew = Boolean(item.titleHe);

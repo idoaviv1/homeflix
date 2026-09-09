@@ -202,18 +202,18 @@ export function MediaModal({ mediaId, onClose, onPlay, onPlayLocalFile }: MediaM
   const primaryFile = media.files?.[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 animate-modal-backdrop flex items-center justify-center p-2 md:p-6 overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-[#141414] border border-white/10 rounded-2xl overflow-hidden shadow-2xl my-auto text-white animate-modal-sheet">
+    <div className="fixed inset-0 z-50 bg-black/85 animate-modal-backdrop flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto scrollbar-hide">
+      <div className="relative w-full max-w-4xl bg-[#141414] border border-white/10 rounded-2xl overflow-hidden shadow-2xl my-auto text-white animate-modal-sheet max-h-[95dvh] flex flex-col">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all duration-300 hover:rotate-90 border border-white/10 cursor-pointer"
+          className="absolute top-3 right-3 md:top-4 md:right-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-all duration-300 hover:rotate-90 border border-white/10 cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* ─── Hero Backdrop Banner ─── */}
-        <div className="relative h-72 md:h-96 w-full overflow-hidden">
+        <div className="relative h-56 sm:h-64 md:h-96 w-full shrink-0 overflow-hidden">
           {showTrailer && media.trailerKey ? (
             <div className="relative w-full h-full bg-black">
               <iframe
@@ -402,7 +402,7 @@ export function MediaModal({ mediaId, onClose, onPlay, onPlayLocalFile }: MediaM
         </div>
 
         {/* ─── Details Section ─── */}
-        <div className="p-6 space-y-6 animate-cascade-3">
+        <div className="p-4 md:p-6 space-y-4 md:space-y-6 animate-cascade-3 overflow-y-auto scrollbar-hide flex-1">
           {/* Metadata Badges */}
           <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-300">
             {media.rating && (
