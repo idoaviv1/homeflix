@@ -20,6 +20,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ isOpen, on
       setStatus('idle');
       setLatency(null);
       setErrorMessage('');
+      testConnection(current);
     }
   }, [isOpen]);
 

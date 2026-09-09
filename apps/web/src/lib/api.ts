@@ -225,25 +225,59 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   }
 
   const fullUrl = apiUrl(url);
-  const res = await fetch(fullUrl, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
+  try {
+    const res = await fetch(fullUrl, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
 
-  if (!res.ok) {
-    let errorMsg = `HTTP Error ${res.status}`;
-    try {
-      const errJson = await res.json();
-      errorMsg = errJson.message || errJson.error || errorMsg;
-    } catch {
-      // Ignore
+    if (!res.ok) {
+      let errorMsg = `HTTP Error ${res.status}`;
+      try {
+        const errJson = await res.json();
+        errorMsg = errJson.message || errJson.error || errorMsg;
+      } catch {
+        // Ignore
+      }
+      throw new Error(errorMsg);
     }
-    throw new Error(errorMsg);
-  }
 
-  const json = await res.json();
-  return json.data !== undefined ? json.data : json;
+    const json = await res.json();
+    return json.data !== undefined ? json.data : json;
+  } catch (err: any) {
+    // If running in Capacitor/native and endpoint is relative, try automatic dual-channel fallback
+    const isCapacitor =
+      typeof window !== 'undefined' &&
+      ((window as any).Capacitor !== undefined ||
+        window.location.protocol === 'capacitor:' ||
+        window.location.protocol.startsWith('file:') ||
+        (window.location.hostname === 'localhost' && !window.location.port));
+
+    if (isCapacitor && !url.startsWith('http')) {
+      const currentBase = getBaseApiUrl();
+      const fallbackBase = currentBase.includes('192.168.1.213')
+        ? 'http://100.127.161.16:8096'
+        : 'http://192.168.1.213:8096';
+
+      try {
+        const fallbackUrl = `${fallbackBase}${url.startsWith('/') ? '' : '/'}${url}`;
+        const fallbackRes = await fetch(fallbackUrl, {
+          ...options,
+          headers,
+          credentials: 'include',
+        });
+        if (fallbackRes.ok) {
+          localStorage.setItem('omflix_server_url', fallbackBase);
+          const json = await fallbackRes.json();
+          return json.data !== undefined ? json.data : json;
+        }
+      } catch {
+        // Fallback failed as well, rethrow original error
+      }
+    }
+    throw err;
+  }
 }
 
 function getAdminUrl(endpoint: string): string {
