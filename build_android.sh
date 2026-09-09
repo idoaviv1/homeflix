@@ -16,7 +16,7 @@ cd "$DIR/apps/web/android"
 JAVA_HOME=/usr/lib/jvm/java-21-openjdk ANDROID_HOME=/home/idodi/Android/Sdk ./gradlew assembleDebug
 
 APK_SRC="$DIR/apps/web/android/app/build/outputs/apk/debug/app-debug.apk"
-DEST_DIR="/media/windows/Shared-APK"
+DEST_DIR="/media/windows/Shared-APK/homeflix"
 mkdir -p "$DEST_DIR"
 
 VERSION=$(node -p "require('$DIR/apps/web/package.json').version || '0.1.0'")
