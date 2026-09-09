@@ -1,15 +1,14 @@
-# Homeflix — Project Guidelines & Mandatory Multi-Platform Rules
+# Homeflix — Project Guidelines & Mandatory Platform Rules
 
-## חוק ברזל: סנכרון רב-פלטפורמי מלא ואוטומטי (Web, iOS IPA, Galaxy Android APK)
+## חוק ברזל: סנכרון קוד רב-פלטפורמי מלא ואוטומטי (Web, Android, iOS)
 בכל תיקון תקלה, שיפור חוויית משתמש, שינוי עיצובי או תוספת פיצ'ר שהמשתמש מבקש:
-1. **חובה להחיל את השינוי אוטומטית בכל שלוש הגרסאות**:
+1. **החלת שינויי הקוד בכל שלוש הפלטפורמות**:
    - **אתר ה-Web**: נבנה ונבדק ב-`apps/web` (פורט 8096).
-   - **אפליקציית iPhone (iOS IPA)**: מסונכרנת באמצעות `npx cap sync ios`, מותאמת לסביבת Capacitor iOS, ומתעדכנת כחבילת IPA בנתיב `/media/windows/Shared-IPA/`.
-   - **אפליקציית Galaxy S22 Ultra (Android APK)**: מסונכרנת באמצעות `npx cap sync android`, שומרת על תאימות אנדרואיד (Cleartext HTTP, Network Security Config, הרשאות אחסון ורשת), ונבנית/נשמרת כחבילת APK בנתיב `/media/windows/Shared-APK/homeflix/`.
+   - **אפליקציית Galaxy S22 Ultra (Android APK)**: מסונכרנת באמצעות `npx cap sync android`, שומרת על תאימות אנדרואיד (Cleartext HTTP, Network Security Config, הרשאות אחסון ורשת), ונבנית/נשמרת אוטומטית כחבילת APK בנתיב `/media/windows/Shared-APK/homeflix/`.
+   - **אפליקציית iPhone (iOS)**: הקוד מסונכרן תמיד באמצעות `npx cap sync ios`, מותאם לסביבת Capacitor iOS ומוודא תאימות מלאה.
 
-2. **אין להשאיר פלטפורמה מאחור**:
-   - כל תיקון באתר ה-Web חייב להשתקף מיידית ב-Capacitor ובקבצי ההתקנה.
-   - כתובות API, ערוצי הזרמה, והגדרות שרת חייבים לפעול בצורה שקופה גם בדפדפן וגם במכשירי Native Mobile.
-   - שתי תיקיות השיתוף חייבות להיות מעודכנות ומסודרות:
-     - `/media/windows/Shared-IPA/` עבור קובצי האייפון (`Homeflix.ipa`).
-     - `/media/windows/Shared-APK/homeflix/` עבור קובצי הגלקסי (`Homeflix-Galaxy-S22-Ultra.apk`).
+2. **הוראה מחייבת וחד-משמעית לגבי בניית קובצי IPA לאייפון**:
+   - **חל איסור מוחלט לקמפל או ליצור קובצי IPA (בנייה ב-Codemagic / יצירת חבילת IPA) באופן אוטומטי!**
+   - אין צורך ואין היתר להפעיל בילד של קובץ IPA ב-Codemagic אלא אם המשתמש **מבקש זאת במפורש במילים ברורות** (לדוגמה: "תיצור לי קובץ IPA", "תבנה לי גרסת IPA לאייפון").
+   - בכל שינוי רגיל: רק מעדכנים את הקוד, מסנכרנים את נכסי ה-iOS בפרויקט (`npx cap sync ios`), אך **לא מייצרים ולא מורידים קובצי IPA**.
+   - קובצי ה-IPA הקיימים ב-`/media/windows/Shared-IPA/` נשמרים כפי שהם, ויתעדכנו אך ורק לפי דרישה מפורשת.
