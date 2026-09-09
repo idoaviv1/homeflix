@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User as UserIcon, Shield, LogIn, LogOut, Download, Sun, Moon, Globe, Clock } from 'lucide-react';
+import { Search, User as UserIcon, Shield, LogIn, LogOut, Download, Sun, Moon, Globe, Clock, Server } from 'lucide-react';
 import { api, type User } from '../lib/api';
 import { DownloadsDrawer } from './DownloadsDrawer';
+import { ServerConfigModal } from './ServerConfigModal';
 import { useThemeLanguage } from '../context/ThemeLanguageContext';
 
 export interface NavbarProps {
@@ -24,6 +25,7 @@ export function Navbar({
   const { theme, toggleTheme, language, toggleLanguage, t } = useThemeLanguage();
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showDownloads, setShowDownloads] = useState(false);
+  const [showServerModal, setShowServerModal] = useState(false);
   const [activeDownloadsCount, setActiveDownloadsCount] = useState(0);
 
   useEffect(() => {
@@ -171,6 +173,15 @@ export function Navbar({
             </button>
 
             <button
+              onClick={() => setShowServerModal(true)}
+              className="relative rounded-full p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              title={language === 'he' ? 'הגדרות שרת' : 'Server Settings'}
+              aria-label="Server Settings"
+            >
+              <Server className="h-5 w-5" />
+            </button>
+
+            <button
               onClick={onOpenSearch}
               className="rounded-full p-2 text-neutral-400 hover:text-white transition-colors cursor-pointer"
               aria-label="Search"
@@ -241,6 +252,17 @@ export function Navbar({
 
                   <button
                     onClick={() => {
+                      setShowServerModal(true);
+                      setShowUserDropdown(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/10 rounded-lg flex items-center gap-2 mt-1 cursor-pointer"
+                  >
+                    <Server className="w-4 h-4 text-[#E50914]" />
+                    <span>{language === 'he' ? 'הגדרות שרת' : 'Server Settings'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
                       onLogout();
                       setShowUserDropdown(false);
                     }}
@@ -258,6 +280,9 @@ export function Navbar({
 
       {/* Downloads Slide-over Drawer */}
       <DownloadsDrawer isOpen={showDownloads} onClose={() => setShowDownloads(false)} />
+
+      {/* Server Config Modal */}
+      <ServerConfigModal isOpen={showServerModal} onClose={() => setShowServerModal(false)} />
     </header>
   );
 }

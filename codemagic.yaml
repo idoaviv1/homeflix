@@ -1,6 +1,6 @@
 workflows:
   ios-unsigned:
-    name: Build unsigned iOS IPA
+    name: Build unsigned iOS IPA (iPhone / iPad)
     instance_type: mac_mini_m2
     max_build_duration: 30
     environment:
@@ -46,3 +46,38 @@ workflows:
           echo "Built $NAME"
     artifacts:
       - "*.ipa"
+
+  android-galaxy:
+    name: Build Android APK (Galaxy S22 Ultra / Android)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      node: latest
+      java: 17
+    scripts:
+      - name: Install dependencies and build web assets
+        script: |
+          corepack enable || npm install -g pnpm
+          pnpm install
+          pnpm --filter @omflix/web build
+          cd apps/web
+          npx cap sync android
+      - name: Build Android APK
+        script: |
+          cd apps/web/android
+          ./gradlew assembleDebug --no-daemon
+      - name: Package APK for Galaxy S22 Ultra
+        script: |
+          set -e
+          APK_PATH=$(find apps/web/android/app/build/outputs/apk -name "*.apk" | head -n1)
+          echo "Found APK at $APK_PATH"
+          VERSION=$(node -p "require('./apps/web/package.json').version || '1.0.0'")
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          SHA=$(git rev-parse --short HEAD 2>/dev/null || echo nogit)
+          NAME="Homeflix-Galaxy-S22-Ultra-${VERSION}-${STAMP}-${SHA}.apk"
+          cp "$APK_PATH" "$NAME"
+          cp "$APK_PATH" Homeflix-Galaxy-S22-Ultra.apk
+          cp "$APK_PATH" Homeflix.apk
+          echo "Built $NAME and Homeflix.apk"
+    artifacts:
+      - "*.apk"

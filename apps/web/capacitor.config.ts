@@ -6,8 +6,14 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   backgroundColor: '#0F0F0F',
   server: {
-    androidScheme: 'https',
+    androidScheme: 'http',
     iosScheme: 'capacitor',
+    cleartext: true,
+  },
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    backgroundColor: '#0F0F0F',
   },
   ios: {
     preferredContentMode: 'mobile',
