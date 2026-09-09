@@ -149,7 +149,7 @@ export function OnlineStreamModal({
   onClose,
 }: OnlineStreamModalProps) {
   const { t, isRtl } = useThemeLanguage();
-  const [selectedServerId, setSelectedServerId] = useState<string>('vidsrc');
+  const [selectedServerId, setSelectedServerId] = useState<string>('anyembed');
   const [currentSeason, setCurrentSeason] = useState(season);
   const [currentEpisode, setCurrentEpisode] = useState(episode);
   const [showServerMenu, setShowServerMenu] = useState(false);
