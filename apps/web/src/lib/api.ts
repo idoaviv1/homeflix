@@ -177,7 +177,9 @@ export function getDeviceId(): string {
 export function getBaseApiUrl(): string {
   if (typeof window === 'undefined') return '';
   const stored = localStorage.getItem('omflix_server_url');
-  if (stored) return stored.replace(/\/+$/, '');
+  if (stored && stored !== 'http://192.168.1.213:8096') {
+    return stored.replace(/\/+$/, '');
+  }
 
   // Detect Capacitor or native mobile wrapper
   const isCapacitor =
@@ -189,10 +191,10 @@ export function getBaseApiUrl(): string {
         (window.location.hostname === 'localhost' && !window.location.port)));
 
   if (isCapacitor) {
-    // Default to LAN IP of the home server
-    return 'http://192.168.1.213:8096';
+    // Default to Tailscale VPN IP of the home server (accessible everywhere)
+    return 'http://100.127.161.16:8096';
   }
-  return '';
+  return stored ? stored.replace(/\/+$/, '') : '';
 }
 
 export function apiUrl(endpoint: string): string {
@@ -256,9 +258,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
     if (isCapacitor && !url.startsWith('http')) {
       const currentBase = getBaseApiUrl();
-      const fallbackBase = currentBase.includes('192.168.1.213')
-        ? 'http://100.127.161.16:8096'
-        : 'http://192.168.1.213:8096';
+      const fallbackBase = currentBase.includes('100.127.161.16')
+        ? 'http://192.168.1.213:8096'
+        : 'http://100.127.161.16:8096';
 
       try {
         const fallbackUrl = `${fallbackBase}${url.startsWith('/') ? '' : '/'}${url}`;

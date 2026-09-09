@@ -15,7 +15,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ isOpen, on
 
   useEffect(() => {
     if (isOpen) {
-      const current = localStorage.getItem('omflix_server_url') || getBaseApiUrl() || 'http://192.168.1.213:8096';
+      const current = localStorage.getItem('omflix_server_url') || getBaseApiUrl() || 'http://100.127.161.16:8096';
       setServerUrl(current);
       setStatus('idle');
       setLatency(null);
@@ -104,7 +104,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ isOpen, on
                   setServerUrl(e.target.value);
                   setStatus('idle');
                 }}
-                placeholder="http://192.168.1.213:8096"
+                placeholder="http://100.127.161.16:8096"
                 className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 rounded-xl text-sm font-mono text-white placeholder-neutral-500 focus:outline-none focus:border-[#E50914]"
                 dir="ltr"
               />
@@ -128,6 +128,21 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ isOpen, on
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
+                onClick={() => handleSelectPreset('http://100.127.161.16:8096')}
+                className="flex items-center gap-2 p-2.5 bg-[#E50914]/10 hover:bg-[#E50914]/20 border border-[#E50914]/30 rounded-xl text-left transition-colors cursor-pointer relative"
+              >
+                <Globe className="w-4 h-4 text-[#E50914] flex-shrink-0" />
+                <div className="overflow-hidden">
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
+                    <span>Tailscale VPN</span>
+                    <span className="text-[9px] px-1 py-0.2 bg-[#E50914] text-white rounded font-extrabold uppercase">ראשי</span>
+                  </div>
+                  <div className="text-[10px] text-neutral-300 font-mono truncate">100.127.161.16:8096</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleSelectPreset('http://192.168.1.213:8096')}
                 className="flex items-center gap-2 p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-left transition-colors cursor-pointer"
               >
@@ -135,18 +150,6 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ isOpen, on
                 <div className="overflow-hidden">
                   <div className="text-xs font-bold truncate">רשת ביתית (WiFi)</div>
                   <div className="text-[10px] text-neutral-400 font-mono truncate">192.168.1.213:8096</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSelectPreset('http://100.127.161.16:8096')}
-                className="flex items-center gap-2 p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-left transition-colors cursor-pointer"
-              >
-                <Globe className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                <div className="overflow-hidden">
-                  <div className="text-xs font-bold truncate">Tailscale VPN</div>
-                  <div className="text-[10px] text-neutral-400 font-mono truncate">100.127.161.16:8096</div>
                 </div>
               </button>
             </div>
